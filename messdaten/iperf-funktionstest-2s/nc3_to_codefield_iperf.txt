@@ -1,0 +1,12 @@
+== 2026-11-14T22:05:56+01:00 nc3 -> codefield (client sendet)
+Connecting to host 89.58.11.96, port 5201
+[  5] local 2.56.99.112 port 51414 connected to 89.58.11.96 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec   127 MBytes  1.07 Gbits/sec  556   1.76 MBytes       
+[  5]   1.00-2.00   sec   116 MBytes   968 Mbits/sec    0   1.87 MBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-2.00   sec   243 MBytes  1.02 Gbits/sec  556            sender
+[  5]   0.00-2.00   sec   224 MBytes   938 Mbits/sec                  receiver
+
+iperf Done.

@@ -1,0 +1,14 @@
+--- DF payload 1472
+--- 185.170.113.136 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2053ms
+rtt min/avg/max/mdev = 0.387/0.440/0.495/0.044 ms
+--- DF payload 1473
+--- 185.170.113.136 ping statistics ---
+3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2045ms
+
+--- DF payload 1400
+--- 185.170.113.136 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2046ms
+rtt min/avg/max/mdev = 0.411/0.483/0.548/0.056 ms
+--- tracepath
+/root/netmess-a.sh: line 10: tracepath: command not found

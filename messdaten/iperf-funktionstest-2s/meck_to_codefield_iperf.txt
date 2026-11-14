@@ -1,0 +1,12 @@
+== 2026-11-14T22:06:05+01:00 meck -> codefield (client sendet)
+Connecting to host 89.58.11.96, port 5201
+[  5] local 185.170.113.136 port 56170 connected to 89.58.11.96 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec   114 MBytes   955 Mbits/sec   20    604 KBytes       
+[  5]   1.00-2.00   sec   113 MBytes   947 Mbits/sec    0    732 KBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-2.00   sec   227 MBytes   951 Mbits/sec   20            sender
+[  5]   0.00-2.00   sec   224 MBytes   937 Mbits/sec                  receiver
+
+iperf Done.

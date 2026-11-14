@@ -1,0 +1,13 @@
+== 2026-11-14T22:06:07+01:00 codefield -> meck (-R, server sendet)
+Connecting to host 89.58.11.96, port 5201
+Reverse mode, remote host 89.58.11.96 is sending
+[  5] local 185.170.113.136 port 56190 connected to 89.58.11.96 port 5201
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-1.00   sec   112 MBytes   936 Mbits/sec                  
+[  5]   1.00-2.00   sec   111 MBytes   934 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-2.00   sec   226 MBytes   947 Mbits/sec   80            sender
+[  5]   0.00-2.00   sec   223 MBytes   935 Mbits/sec                  receiver
+
+iperf Done.
