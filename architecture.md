@@ -1,6 +1,6 @@
 # Cubbermine – Architektur
 
-**Status:** Zielarchitektur (Entwurf, 14.11.2026). Gewählte Variante **B**: **ein gemeinsamer K3s/Kubernetes-Cluster** über die drei vorhandenen Hosts. Dies ist ein Plan, kein bereits installierter Cluster.
+**Status:** Zielarchitektur (Entwurf, 14.11.2026). Gewählte Variante **B**: **ein gemeinsamer K3s/Kubernetes-Cluster mit einer neu anzumietenden dedizierten Control Plane und den drei bestehenden Hosts als Worker-Nodes**. Dies ist ein Plan, kein bereits installierter Cluster.
 
 ## Ziel
 
@@ -16,6 +16,63 @@ Cubbermine ist eine geplante Kubernetes-basierte Minecraft-Hosting-Plattform. Ei
 
 Die Docker-Bridge-Netzwerke sind **hostlokal**; ein gemeinsames Cluster-Netz oder bestehende private Verbindungen sind aus den Inventaren **nicht nachgewiesen**.
 
+## Control-Plane-Strategie und Ausbaupfad
+
+**Phase 1 (Entscheidung):** Ein zusätzlicher, dedizierter Server führt die einzige K3s-Control-Plane aus. MeckMinecraft, NC3 und Codefield laufen als **drei reine Worker-Nodes**. Damit ist die Verwaltungslast vom Minecraft-Workload getrennt; alle drei bestehenden Hosts bleiben für Anwendungs-Pods nutzbar. Die Control Plane ist aber **ein Single Point of Failure**. Bereits laufende Pods können bei einem Ausfall grundsätzlich weiterlaufen, sofern Netzwerk, Storage und Abhängigkeiten verfügbar bleiben; Scheduling, Controller-Reconciliation und administrative Änderungen sind eingeschränkt bzw. nicht verfügbar.
+
+**Phase 2 (Option):** Ausbau zu **drei Control-Plane-Nodes** und unverändert drei Worker-Nodes, mit geeigneter HA-API-Adresse/Load-Balancer und einer getesteten K3s-etcd-Quorum-Konfiguration. Das ist **nicht** automatisch Teil des MVP und setzt ausreichende Netzwerkqualität sowie eine geplante Migration des Datastores voraus. Drei Control-Plane-Nodes tolerieren bei intaktem Quorum den Ausfall eines einzelnen Control-Plane-Nodes; sie garantieren kein ausfallfreies Minecraft oder Storage-HA.
+
+**Grobe Planungsgröße für den neuen Control-Plane-Server (keine Messung):** 2–4 vCPU, 4–8 GiB RAM, 40–80 GB SSD und gesicherter VPN-Anschluss. Dimensionierung nach Clustergröße, Monitoring und Lasttests verifizieren. Die Control Plane soll keine normalen Minecraft-Workloads ausführen (Node-Taints/Absicherung prüfen). Öffentliche Minecraft-Ports führen **nicht** über die Kubernetes-API/Control Plane.
+
+### Phase 1 – dedizierte Control Plane und drei Worker
+
+```mermaid
+flowchart TB
+  admin["Administratoren (VPN)"] --> api["K3s API (privat)"]
+  players["Minecraft-Clients"] --> proxy["Minecraft TCP-Proxy / öffentlicher Zugang"]
+  subgraph cluster["Ein gemeinsamer K3s-Cluster"]
+    cp["NEUER SERVER – dedizierte Control Plane<br/>K3s Server + Datastore<br/>keine Minecraft-Pods"]
+    subgraph workers["Bestehende Hosts – Worker über WireGuard"]
+      m["MeckMinecraft<br/>185.170.113.136"]
+      n["NC3<br/>2.56.99.112"]
+      c["Codefield<br/>89.58.11.96"]
+    end
+    services["Interne Services + Minecraft-Pods<br/>PVC/Storage pro Instanz"]
+    cp -. "Steuerung über privates Netz" .-> m
+    cp -. "Steuerung über privates Netz" .-> n
+    cp -. "Steuerung über privates Netz" .-> c
+    workers --> services
+  end
+  api --> cp
+  proxy --> services
+```
+
+### Phase 2 – möglicher HA-Ausbau
+
+```mermaid
+flowchart TB
+  vip["Private Kubernetes API / Load-Balancer"]
+  subgraph control["3 Control-Plane-Nodes – HA-etcd (Option)"]
+    cp1["Control Plane 1"]
+    cp2["Control Plane 2"]
+    cp3["Control Plane 3"]
+  end
+  subgraph worker["3 bestehende Worker"]
+    w1["MeckMinecraft"]
+    w2["NC3"]
+    w3["Codefield"]
+  end
+  vip --> cp1
+  vip --> cp2
+  vip --> cp3
+  cp1 <--> cp2
+  cp2 <--> cp3
+  cp1 <--> cp3
+  control -. "Kubernetes Steuerung" .-> worker
+```
+
+**Technischer Vorbehalt:** Das Beispiel mit drei etcd-Mitgliedern ist nur sinnvoll, wenn RTT, Bandbreite, Paketverlust, Firewall und Ausfallszenarien den stabilen Betrieb erlauben. HA-Control-Plane und HA-Storage sind getrennte Entscheidungen.
+
 ## Zielbild: ein gemeinsamer K3s-Cluster
 
 ```mermaid
@@ -25,7 +82,7 @@ flowchart TB
 
     subgraph cluster["Ein gemeinsamer K3s-Cluster – Zielarchitektur"]
       direction TB
-      cp["Kubernetes Control Plane<br/>(Platzierung/HA noch festzulegen)"]
+      cp["Dedizierte K3s Control Plane<br/>neuer vierter Server · Phase 1"]
       ingress["HTTP Ingress / Gateway"]
       app["Cubbermine Web-UI + API<br/>(geplant)"]
       proxy["Minecraft-Proxy<br/>BungeeCord oder Velocity"]
@@ -38,9 +95,9 @@ flowchart TB
       app --> db
       proxy --> svc
 
-      subgraph nodes["Drei Kubernetes-Nodes über privates Overlay/VPN"]
+      subgraph nodes["Drei Worker-Nodes über privates Overlay/VPN"]
         direction LR
-        n1["MeckMinecraft<br/>185.170.113.136<br/>K3s Node"]
+        n1["MeckMinecraft<br/>185.170.113.136<br/>K3s Worker"]
         n2["NC3<br/>2.56.99.112<br/>K3s Node"]
         n3["Codefield<br/>89.58.11.96<br/>K3s Node"]
       end
@@ -61,9 +118,13 @@ flowchart TB
 ```mermaid
 flowchart LR
   subgraph overlay["Privates WireGuard-/Overlay-Netz (geplant)"]
+    cp4["Neue Control Plane · IP noch offen"]
     a["MeckMinecraft<br/>185.170.113.136"] <-->|"Cluster-Verkehr"| b["NC3<br/>2.56.99.112"]
     b <-->|"Cluster-Verkehr"| c["Codefield<br/>89.58.11.96"]
     a <-->|"Cluster-Verkehr"| c
+    cp4 <-->|"K3s-Steuerung"| a
+    cp4 <-->|"K3s-Steuerung"| b
+    cp4 <-->|"K3s-Steuerung"| c
   end
 ```
 
@@ -71,8 +132,8 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 
 ## Architekturbausteine
 
-- **K3s Control Plane:** Scheduling, API und Clusterverwaltung. Ob eine einzelne Control Plane oder eine HA-Konfiguration praktikabel ist, wird erst nach Messungen zu Netzwerklatenz, Quorum und Ausfallszenarien entschieden. Drei räumlich/administrativ getrennte Hosts garantieren keine HA.
-- **K3s Nodes:** alle drei bestehenden Hosts sollen dem *selben* Cluster angehören; notwendige Labels, Taints und Ressourcenreserven werden definiert.
+- **K3s Control Plane:** Phase 1: ein neuer dedizierter Server als einzige Control Plane (bewusster SPOF). Phase 2: optional zwei weitere Control-Plane-Server, sofern etcd-HA und Netzwerkbedingungen getestet sind.
+- **K3s Worker-Nodes:** alle drei bestehenden Hosts sollen als reine Worker dem *selben* Cluster angehören; notwendige Labels, Taints und Ressourcenreserven werden definiert.
 - **Cubbermine API/Controller (geplant):** kontrollierte Bereitstellung der Ressourcen; Authentifizierung, Autorisierung, Quotas, Status und Audit.
 - **Minecraft-Server:** je Instanz vorzugsweise ein `StatefulSet` mit `replicas: 1`, internem `Service`, ressourcenbegrenztem Container und eigenem `PersistentVolumeClaim`. **Keine** gleichzeitigen Schreibzugriffe mehrerer Pods auf dieselbe Welt.
 - **Minecraft-Proxy:** zentraler öffentlich erreichbarer TCP-Einstieg; Backends nur intern. BungeeCord kann übernommen oder Velocity später geprüft werden.
@@ -107,7 +168,7 @@ Kubernetes-API nur über VPN/administrativen Zugang. RBAC mit minimalen Rechten,
 
 ## Offene Architekturentscheidungen / Risiken
 
-1. Control-Plane-Host(s), Etcd/Quorum, Ausfall- und Wiederanlaufkonzept.
+1. Neuen Control-Plane-Host beschaffen und dimensionieren; Phase-1-Datastore, Backup/Restore und Single-Point-of-Failure dokumentieren; Phase-2-etcd/Quorum-Migrationspfad gesondert testen.
 2. WireGuard-Topologie, private Adressen, DNS, MTU, CNI und Firewall.
 3. StorageClass, PVC-Bindung, Hostausfall und Backup/Restore.
 4. Minecraft-Proxy (BungeeCord oder Velocity), öffentliche TCP-Adresse und Portstrategie.
@@ -117,6 +178,6 @@ Kubernetes-API nur über VPN/administrativen Zugang. RBAC mit minimalen Rechten,
 
 ## Migrationsprinzip
 
-**Kein Big Bang:** zuerst ein K3s-Pilot mit einem nichtkritischen Minecraft-Server, anschließend kontrolliertes Hinzufügen der weiteren Hosts zum **gemeinsamen Cluster**. Datenexport, konsistentes Backup, Restore-Probe, Erreichbarkeit und Rollback werden pro Dienst geprüft. Produktive Compose-Container bleiben bis zur Abnahme bestehen.
+**Kein Big Bang:** zuerst die dedizierte Control Plane auf dem neuen Server, dann ein K3s-Pilot mit einem nichtkritischen Minecraft-Server, anschließend kontrolliertes Hinzufügen der weiteren Hosts zum **gemeinsamen Cluster**. Datenexport, konsistentes Backup, Restore-Probe, Erreichbarkeit und Rollback werden pro Dienst geprüft. Produktive Compose-Container bleiben bis zur Abnahme bestehen.
 
 Siehe [features.md](features.md) und [planning.md](planning.md).
