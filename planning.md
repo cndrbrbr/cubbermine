@@ -1,6 +1,6 @@
 # Cubbermine – Planung
 
-**Entscheidung:** **Variante B** – ein gemeinsamer Kubernetes/K3s-Cluster aus MeckMinecraft, NC3 und Codefield.
+**Entscheidung:** **Variante B** – ein gemeinsamer Kubernetes/K3s-Cluster. **Phase 1:** neuer dedizierter Control-Plane-Server + drei bestehende Worker (MeckMinecraft, NC3, Codefield). **Phase 2 optional:** drei dedizierte Control Planes + dieselben drei Worker.
 
 **Stand:** 14.11.2026. Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
 
@@ -11,7 +11,10 @@
 - [ ] Inventare aller Hosts verifizieren: CPU, RAM, Disk, Netzwerk, Firewall, laufende Container, Volumes und Compose-Dateien.
 - [ ] Abhängigkeiten, öffentliche Ports, DNS, Proxy, Backup-Stand und Speicherorte dokumentieren.
 - [ ] Netz-Latenz/RTT, Bandbreite, Paketverlust, MTU zwischen den drei Hosts messen.
-- [ ] Control-Plane-Topologie und Ausfallmodell entscheiden (Single Control Plane vs. erprobte HA).
+- [ ] Neuen dedizierten Control-Plane-Server planen und anmieten (Richtwert: 2–4 vCPU, 4–8 GiB RAM, 40–80 GB SSD; tatsächlichen Bedarf prüfen).
+- [ ] Phase-1-Topologie festhalten: genau eine dedizierte K3s-Control-Plane, drei reine Worker; Single Point of Failure ausdrücklich akzeptieren oder überarbeiten.
+- [ ] Datastore und Sicherung/Wiederherstellung der einzelnen Control Plane festlegen.
+- [ ] Anforderungen an optionalen Phase-2-Ausbau auf drei Control Planes (etcd-Quorum, privater API-Load-Balancer, Migration) erfassen.
 - [ ] Speicherstrategie wählen (lokale PVCs + Node-Pinning oder getesteter verteilter Storage).
 - [ ] Minecraft-Proxy, Auth und Anforderungen an Mandantentrennung festlegen.
 
@@ -21,12 +24,23 @@
 
 - [ ] Privates WireGuard-/Overlay-Netz mit definierten Node-IP-Adressen aufbauen.
 - [ ] Firewall/SSH/Kubernetes-API absichern und benötigte Cluster-Ports dokumentieren.
-- [ ] K3s zunächst nichtproduktiv auf einem Host installieren.
+- [ ] K3s nichtproduktiv **auf dem neuen dedizierten Control-Plane-Host** installieren; Minecraft-Workloads dort ausschließen.
 - [ ] CNI, DNS, StorageClass und grundlegende Pod-Kommunikation testen.
-- [ ] Zweiten und dritten Host kontrolliert in **denselben Cluster** aufnehmen.
-- [ ] Node-Ausfall, Rejoin und Recovery prüfen; Control-Plane-Konzept validieren.
+- [ ] MeckMinecraft, NC3 und Codefield kontrolliert als **drei Worker in denselben Cluster** aufnehmen.
+- [ ] Worker-Ausfall, Rejoin und Recovery prüfen; separaten Ausfall der einzigen Control Plane simulieren und Auswirkungen dokumentieren.
+- [ ] Datastore-Backup und Restore der Control Plane praktisch testen.
 
-**Gate:** Alle drei Nodes `Ready`; Cluster-Kommunikation funktioniert über private IPs; keine ungewollt öffentlichen Admin-Endpunkte.
+**Gate:** Dedizierte Control Plane und alle drei Worker `Ready`; Cluster-Kommunikation funktioniert über private IPs; keine ungewollt öffentlichen Admin-Endpunkte.
+
+### M1b – Phase-2-HA-Entscheidung (optionaler späterer Ausbau)
+
+- [ ] Betriebserfahrung und tatsächliche Verfügbarkeitsanforderungen aus Phase 1 sammeln.
+- [ ] Netzwerklatenz, Zuverlässigkeit und Ausfallzonen für drei etcd-Control-Plane-Mitglieder verifizieren.
+- [ ] Zwei weitere Control-Plane-Server und private Kubernetes-API-/Load-Balancer-Adresse planen.
+- [ ] Unterstützten Datastore-/HA-Migrationsweg in Testumgebung erproben; etcd-Snapshots und Recovery testen.
+- [ ] Dokumentieren, dass Control-Plane-HA kein Storage- oder Minecraft-Failover garantiert.
+
+**Gate (optional):** Drei Control Planes bilden ein stabiles Quorum und der Ausfall eines Mitglieds ist erfolgreich getestet.
 
 ### M2 – Minecraft-Workload-Prototyp
 
@@ -76,7 +90,9 @@
 | Priorität | Aufgabe | Abhängigkeit |
 | --- | --- | --- |
 | P0 | Netzwerkmessungen und WireGuard-Konzept | Host-Inventar |
-| P0 | Control Plane und Cluster-Ausfallmodell | Netzwerkmessungen |
+| P0 | Dedizierten vierten Control-Plane-Server beschaffen | Ressourcen- und Netzwerkplanung |
+| P0 | Single-Control-Plane-Backup, Restore und Ausfalltest | Dedizierte Control Plane |
+| P2 | Optionale Erweiterung auf drei Control Planes / etcd-HA | Netzwerkmessungen, Datastore-Migrationsprobe |
 | P0 | Persistenter Storage samt Restore | Storage-Auswahl |
 | P0 | Gemeinsamen K3s-Cluster aufbauen | Control Plane, VPN |
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
@@ -99,7 +115,8 @@
 ## Risiken
 
 - Hohe Latenz und instabiles Cluster-Netz über mehrere Provider/Standorte.
-- Quorum-/Control-Plane-Ausfälle, vor allem bei ungeeigneter HA-Topologie.
+- Die einzelne Control Plane in Phase 1 bleibt ein **Single Point of Failure**; Kubernetes-API und Controller können ausfallen, während bestehende Workloads eventuell weiterlaufen.
+- Bei Phase-2-HA können Quorum-/Control-Plane-Ausfälle insbesondere durch hohe Latenz und ungeeignete Netzwerk-Topologie auftreten.
 - Lokale Weltdaten verhindern transparente Verschiebung zwischen Nodes.
 - Doppelter Weltzugriff verursacht Datenverlust.
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.
