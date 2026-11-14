@@ -1,6 +1,6 @@
 # Cubbermine – Features
 
-**Zielvariante B:** Eine zentrale Minecraft-Hosting-Plattform auf **einem gemeinsamen K3s-Cluster mit drei Nodes** (MeckMinecraft, NC3, Codefield).
+**Zielvariante B:** Eine zentrale Minecraft-Hosting-Plattform auf **einem gemeinsamen K3s-Cluster mit vier Nodes in Phase 1**: einer neu angemieteten dedizierten Control Plane und drei bestehenden Worker-Nodes (MeckMinecraft, NC3, Codefield). Optionaler Phase-2-Ausbau auf drei Control Planes plus drei Worker.
 
 **Legende:** P0 = MVP, P1 = Ausbau, P2 = optional. Status aller Einträge: **geplant**; es wird keine Implementierung im Repository behauptet.
 
@@ -8,7 +8,10 @@
 
 | Feature | Beschreibung | Akzeptanzkriterium |
 | --- | --- | --- |
-| Gemeinsamer K3s-Cluster | 3 Hosts über gesichertes privates Node-Netz verbunden | Alle drei Nodes erscheinen `Ready` und Pods erreichen clusterinterne Services |
+| Gemeinsamer K3s-Cluster | Dedizierte Control Plane auf neuem vierten Host, drei bestehende Worker über gesichertes privates Netz | Control Plane und alle drei Worker erscheinen `Ready`; interner Pod-Verkehr funktioniert |
+| Dedizierte Control Plane | K3s-Steuerung getrennt von Minecraft-Last; keine regulären Spielserver-Pods auf dem Control-Plane-Host | K3s-API nur administrativ erreichbar; Minecraft-Pods laufen ausschließlich auf Workern |
+| Control-Plane-Backup & Recovery | Sicherung des K3s-Datastores und getestete Wiederherstellung | Wiederanlauf der Single Control Plane ist dokumentiert und im Test erfolgreich |
+| SPOF-Transparenz | Bei nur einer Control Plane Ausfallfolgen sichtbar dokumentieren | Ausfalltest bestätigt Grenzen von Scheduling und Verwaltung; laufende Pods und Abhängigkeiten werden getrennt bewertet |
 | Node-/Kapazitätsübersicht | CPU, RAM, Storage, Pod-Status pro Node | Dashboard/API zeigt aktuelle Messwerte und Warnungen |
 | Minecraft-Server erstellen | Servertyp, Image/Version, RAM, CPU, Storage auswählen | Ein gültiger Antrag erzeugt genau eine nutzbare Instanz |
 | Server starten/stoppen/neustarten | Lifecycle über Kubernetes steuern | Statuswechsel ist nachvollziehbar und Welt bleibt erhalten |
@@ -32,6 +35,13 @@
 | Wartungsmodus/Migration | Welten sichern, Dienst umstellen | Kontrollierter Wechsel mit Restore-/Rollback-Test |
 | DNS und Domains | Verbindungsadressen zentral verwalten | DNS/Proxy-Zuordnung ist dokumentiert |
 | API und Audit | Dokumentierte REST API, Audit-Ereignisse | Jede administrative Änderung nachvollziehbar |
+
+## Phase 2 – optionaler HA-Ausbau
+
+- Zwei zusätzliche dedizierte Control-Plane-Hosts (insgesamt drei) und ein stabiler privater Kubernetes-API-Endpunkt.
+- Embedded-etcd-HA mit dokumentierten Quorum- und Ausfalltests; nur nach Prüfung der Netzwerklatenzen und Datastore-Migration.
+- Bestehende drei Worker bleiben als Minecraft-Ausführungsorte erhalten.
+- HA der Control Plane ist nicht gleich HA der Minecraft-Welten oder des Storage.
 
 ## P2 – optional
 
