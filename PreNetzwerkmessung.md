@@ -288,7 +288,7 @@ Die abschließende Entscheidung erfolgt erst nach Auswertung der Messdaten und p
 
 ## 9. Ergebnisse
 
-**Stand:** 14.11.2026, 22:15 Uhr. Phase A läuft noch: Die Kurzmessungen sind fertig, die Langzeitmessung und die iperf3-Tests stehen aus (Zeitplan in 9.6).
+**Stand:** 15.11.2026. Phase A läuft noch: Kurzmessungen und iperf3-Tests sind fertig und ausgewertet, die Langzeitmessung läuft (Zeitplan in 9.6).
 
 Rohdaten und Skripte liegen in [messdaten/](messdaten/).
 
@@ -330,25 +330,47 @@ Alle sechs Pfade haben **zwei Hops**: das Gateway im eigenen Subnetz des Quellho
 
 Die Gateways antworten mit schwankenden Zeiten (Durchschnitt 3–4,6 ms, Maximum 23–44 ms). Das liegt an der ICMP-Behandlung im Router selbst und betrifft den durchgeleiteten Verkehr nicht: Am Ziel liegt der Durchschnitt bei 0,4–0,5 ms und die Standardabweichung bei 0,1–0,5 ms.
 
-### 9.5 TCP-Durchsatz (vorläufig)
+### 9.5 TCP-Durchsatz (iperf3, 60 s)
 
-Bisher gab es nur einen **2-Sekunden-Funktionstest** (14.11.2026, 22:05 Uhr) mit Codefield als iperf3-Server. Er sollte prüfen, ob das Skript und die Firewall-Regeln funktionieren; als Messung zählt er nicht.
+Messzeit: 15.11.2026, 04:00–04:12 Uhr (Sonntagnacht), systemd-Timer `netmess-iperf` auf NC3. Jeder Host war nacheinander iperf3-Server. Jede gerichtete Verbindung wurde zweimal gemessen: einmal sendet der Client (normal), einmal der Server (`-R`). Alle zwölf Läufe sind vollständig und ohne Fehler durchgelaufen. Danach waren auf allen drei Hosts keine `netmess`-Regeln mehr vorhanden und kein iperf3 lief mehr. Rohdaten: [messdaten/iperf/](messdaten/iperf/).
 
-| Quelle → Ziel | Durchsatz (Empfänger) |
-|---|---|
-| MeckMinecraft → Codefield | 937 Mbit/s |
-| NC3 → Codefield | 938 Mbit/s |
-| Codefield → MeckMinecraft (-R) | 935 Mbit/s |
-| Codefield → NC3 (-R) | 1,51 Gbit/s |
+Die 1-Sekunden-Werte wurden zusätzlich ausgewertet (je 60 Intervalle). Die Retransmit-Quote ist der Anteil der neu gesendeten an allen gesendeten TCP-Segmenten (1448 Byte).
 
-Die maßgeblichen 60-Sekunden-Messungen für alle sechs Richtungen werden nachgetragen.
+| Quelle → Ziel | Lauf | Durchsatz (Empfänger) | 1-s-Werte min–max | Streuung (σ) | Retransmits | Quote |
+|---|---|---|---|---|---|---|
+| MeckMinecraft → NC3 | normal | 937 Mbit/s | 903–1000 Mbit/s | 16,8 | 1.258 | 0,03 % |
+| MeckMinecraft → NC3 | -R | 937 Mbit/s | 933–938 Mbit/s | 1,3 | 1.182 | 0,02 % |
+| NC3 → MeckMinecraft | normal | 935 Mbit/s | 895–959 Mbit/s | 8,8 | 1.666 | 0,03 % |
+| NC3 → MeckMinecraft | -R | 937 Mbit/s | 926–938 Mbit/s | 2,1 | 1.041 | 0,02 % |
+| MeckMinecraft → Codefield | normal | 934 Mbit/s | 877–950 Mbit/s | 11,2 | 1.157 | 0,02 % |
+| MeckMinecraft → Codefield | -R | 937 Mbit/s | 930–940 Mbit/s | 2,0 | 1.342 | 0,03 % |
+| Codefield → MeckMinecraft | normal | 937 Mbit/s | 922–965 Mbit/s | 6,0 | 839 | 0,02 % |
+| Codefield → MeckMinecraft | -R | 937 Mbit/s | 927–939 Mbit/s | 2,3 | 678 | 0,01 % |
+| NC3 → Codefield | normal | 947 Mbit/s | 915–1000 Mbit/s | 19,8 | 795 | 0,02 % |
+| NC3 → Codefield | -R | 947 Mbit/s | 943–950 Mbit/s | 1,9 | 1.581 | 0,03 % |
+| **Codefield → NC3** | normal | **1,01 Gbit/s** | 763 Mbit/s–2,20 Gbit/s | 136 | **423.634** | **8,0 %** |
+| **Codefield → NC3** | -R | **1,01 Gbit/s** | 867 Mbit/s–2,02 Gbit/s | 132 | **438.632** | **8,3 %** |
+
+(Bei `-R` steht die Senderichtung in der Spalte „Quelle → Ziel“, d. h. Quelle ist der iperf3-Server.)
+
+**Ergebnis:**
+
+- Alle sechs Richtungen erreichen etwa **1 Gbit/s**. Die Werte um 935–947 Mbit/s entsprechen dem, was bei einer 1-Gbit/s-Anbindung nach Abzug des TCP/IP-Overheads als Nutzdatenrate übrig bleibt. Die Anbindung ist also auf 1 Gbit/s pro Host begrenzt, und diese Grenze wird voll erreicht.
+- Die Werte sind sehr gleichmäßig. Bei `-R` schwanken die 1-Sekunden-Werte nur um ±1–2 Mbit/s, beim normalen Lauf um 6–20 Mbit/s (Hochlaufen der TCP-Überlastkontrolle beim Sender).
+- Hin- und Rückrichtung sind gleich schnell. Eine Asymmetrie gibt es nicht.
+
+**Auffälligkeit Codefield → NC3:** In dieser Richtung kommen zwar ebenfalls rund 1 Gbit/s an, aber mit etwa **8 % Retransmits** (rund 7.000 pro Sekunde statt sonst 10–30). Das Staufenster (Cwnd) bleibt dabei fast durchgehend bei 15–50 KByte, in den anderen Richtungen liegt es bei 400–650 KByte. In der ersten Sekunde kommen kurz 2,0–2,2 Gbit/s durch. Das passt zu einem **Policer**, der auf diesem Pfad hart bei etwa 1 Gbit/s abschneidet und überzählige Pakete verwirft, statt sie zu puffern. Auf den anderen Pfaden wird offenbar sanft geformt (Shaping). Das deckt sich mit dem Funktionstest vom Vortag, bei dem auf derselben Strecke 1,51 Gbit/s gemessen wurden (2 Sekunden, also überwiegend Anfangsspitze). Die Gegenrichtung NC3 → Codefield ist unauffällig.
+
+Bewertung: Für K3s ist das **kein Ausschlusskriterium**. Der Effekt tritt nur auf, wenn die Strecke voll ausgelastet ist. Die ICMP-Messung (9.2) zeigt auf NC3 ↔ Codefield sogar die geringste Streuung aller Pfade. Bei großen Übertragungen von Codefield zu NC3 (Image-Pulls, Volume-Replikation, Backups) können aber Paketverluste auftreten. Diese können gleichzeitig laufenden Verkehr (Kubernetes-API, Minecraft) kurz verzögern. Deshalb sollte man solche Übertragungen begrenzen (z. B. Bandbreitenlimit bei Backups). In Phase B ist zu prüfen, ob der Effekt über WireGuard (UDP) ebenso auftritt.
+
+Der 2-Sekunden-Funktionstest vom 14.11.2026 ist nur noch der Vollständigkeit halber in [messdaten/iperf-funktionstest-2s/](messdaten/iperf-funktionstest-2s/) abgelegt.
 
 ### 9.6 Offene Punkte
 
 | Punkt | Status |
 |---|---|
 | Langzeitmessung (alle 60 s 10 Pings, 6 Richtungen) | läuft seit 14.11.2026, 22:05 Uhr, endet automatisch am 17.11.2026, 22:05 Uhr; Auswertung nach ≥ 24 h |
-| iperf3, 60 s je Richtung, mit und ohne `-R` | geplant für 15.11.2026, 04:00 Uhr (systemd-Timer `netmess-iperf` auf NC3) |
+| iperf3, 60 s je Richtung, mit und ohne `-R` | erledigt am 15.11.2026, 04:00–04:12 Uhr, ausgewertet in 9.5 |
 | Phase B (Control Plane, WireGuard, K3s) | wartet auf den zusätzlichen Server |
 
 ### 9.7 Vorläufige Bewertung
@@ -361,4 +383,6 @@ Gemessen an den Orientierungswerten aus Abschnitt 4 sind alle Kurzzeitwerte **�
 
 Einzelne Ausreißer bis 15,7 ms (Codefield → MeckMinecraft) sind vereinzelte Spitzen und haben keinen Einfluss auf Mittelwert und Streuung.
 
-**Vorläufige Empfehlung: A – Geeignet.** Das Netz zwischen den drei Hosts genügt sowohl einem Cluster mit einer einzelnen Control Plane als auch den strengeren Anforderungen von embedded etcd (Phase 2). Für die neue Control Plane bietet sich derselbe Provider und dasselbe Rechenzentrum an, damit sie ebenfalls nur einen Hop entfernt ist. Diese Empfehlung ist erst endgültig, wenn die Langzeit- und Durchsatzmessung ausgewertet ist.
+**Vorläufige Empfehlung: A – Geeignet.** Das Netz zwischen den drei Hosts genügt sowohl einem Cluster mit einer einzelnen Control Plane als auch den strengeren Anforderungen von embedded etcd (Phase 2). Für die neue Control Plane bietet sich derselbe Provider und dasselbe Rechenzentrum an, damit sie ebenfalls nur einen Hop entfernt ist.
+
+Die Durchsatzmessung (9.5) bestätigt die Empfehlung: Alle Richtungen erreichen die volle 1-Gbit/s-Anbindung. Einzige Einschränkung ist die hohe Retransmit-Quote von Codefield zu NC3 bei Volllast; große Übertragungen auf dieser Strecke sollten deshalb begrenzt werden. Endgültig ist die Empfehlung erst, wenn die Langzeitmessung ausgewertet ist.

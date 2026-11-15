@@ -1,0 +1,11 @@
+start 2026-11-15T04:00:05+01:00
+-A INPUT -s 89.58.11.96/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -s 2.56.99.112/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 5201 -m comment --comment netmess -j DROP
+-A INPUT -s 185.170.113.136/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -s 89.58.11.96/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 5201 -m comment --comment netmess -j DROP
+-A INPUT -s 185.170.113.136/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -s 2.56.99.112/32 -p tcp -m tcp --dport 5201 -m comment --comment netmess -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 5201 -m comment --comment netmess -j DROP
+end 2026-11-15T04:12:46+01:00
