@@ -2,7 +2,7 @@
 
 **Entscheidung:** **Variante B** – ein gemeinsamer Kubernetes/K3s-Cluster. **Phase 1:** neuer dedizierter Control-Plane-Server + drei bestehende Worker (MeckMinecraft, NC3, Codefield). **Phase 2 optional:** drei dedizierte Control Planes + dieselben drei Worker.
 
-**Stand:** 16.11.2026 (M2 um Container-Konzept und Archiv ergänzt; Adresskonzept und alle Web-/Begleitdienste aufgenommen). Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
+**Stand:** 17.11.2026 (M2 um Container-Konzept und Archiv ergänzt; Adresskonzept und alle Web-/Begleitdienste aufgenommen; Hetzner Storage Box als gemeinsames Backup- und Archivziel für Bestand und Cluster). Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
 
 ## Meilensteine
 
@@ -21,7 +21,7 @@ Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/
 - [ ] Zweiter Zugang zum Aufräumen (`restic forget --prune`, Box-Snapshots einschalten) — nicht auf NC3; offen.
 - [ ] Passwort der Storage Box ändern (wurde im Chat genannt).
 - [ ] **Schlüssel getrennt sichern:** restic-Passwort liegt in `/root/.config/restic/mineback-offsite.pass` auf NC3 und muss zusätzlich offline aufbewahrt werden. Den `age`-Schlüssel des Tresors (`/etc/mineback/vault_identity.txt`) und den Schlüssel der Offsite-Kopie offline aufbewahren (Papier/USB, mindestens zwei Orte). Ohne sie ist die Kopie wertlos.
-- [ ] **Zeitplan und Bandbreite:** täglich nach den Backup-Läufen (z. B. 05:00, Agenten laufen um 02:15), mit Bandbreitenbegrenzung, damit die Minecraft-Server nicht leiden; die erste Übertragung (~830 GB) über mehrere Nächte verteilen.
+- [x] **Zeitplan und Bandbreite:** täglich 03:30 (nach den Agenten um 02:15), 25 MB/s, niedrige CPU- und Plattenpriorität; Erstlauf (~830 GB, ca. 10 h) ohne Zeitfenster am Stück. Seit 17.11.2026 werden außerdem Zugangsdateien außerhalb des Tresors mitgesichert (`mineback-offsite-collect`, siehe [backups.md](backups.md)).
 - [ ] **Längere Aufbewahrung in der Kopie** als im Tresor (dort nur `keep_last = 1` plus markierte Stände): Vorschlag täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; Löschungen im Tresor dürfen nicht sofort in die Kopie durchschlagen.
 - [x] (Schreibschutz getestet: Löschen eines Snapshots mit dem NC3-Schlüssel → `403 Forbidden`; Zugang über das Hauptkonto, noch kein Unterbenutzer) Zugang zur Kopie so einrichten, dass NC3 nur schreiben, aber keine alten Stände löschen kann, damit ein kompromittierter Host die Kopie nicht zerstören kann: Der SSH-Schlüssel von NC3 bekommt in der Storage Box einen festen Befehl `rclone serve restic --stdio --append-only <repo>` (laut restic-Forum auf der Storage Box möglich, nicht offiziell von Hetzner beschrieben, deshalb zuerst testen). Aufräumen (`restic forget --prune`) läuft mit einem zweiten Schlüssel, der nicht auf NC3 liegt. Zusätzlich automatische **Box-Snapshots** (BX21: bis zu 20) als zweite Absicherung; sie zählen gegen den Speicherplatz.
 - [ ] **Überwachung:** Metrik `mineback_offsite_last_success_timestamp_seconds` (Textfile-Collector auf NC3) ist eingerichtet; Grafana-Alarm folgt nach Abschluss des Erstlaufs. Ziel: Alter der letzten erfolgreichen Offsite-Kopie als Metrik, Grafana-Alarm per Discord, wenn sie älter als 36 Stunden ist.
@@ -46,7 +46,7 @@ Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/
 - [ ] Netz-Latenz/RTT, Bandbreite, Paketverlust, MTU zwischen den drei Hosts messen.
 - [ ] Neuen dedizierten Control-Plane-Server planen und anmieten (Richtwert: 2–4 vCPU, 4–8 GiB RAM, 40–80 GB SSD; tatsächlichen Bedarf prüfen).
 - [ ] Phase-1-Topologie festhalten: genau eine dedizierte K3s-Control-Plane, drei reine Worker; Single Point of Failure ausdrücklich akzeptieren oder überarbeiten.
-- [ ] Datastore und Sicherung/Wiederherstellung der einzelnen Control Plane festlegen.
+- [ ] Datastore und Sicherung/Wiederherstellung der einzelnen Control Plane festlegen; Sicherungsziel ist die Hetzner Storage Box (eigenes restic-Repository, Zugang nur anhängen).
 - [ ] Anforderungen an optionalen Phase-2-Ausbau auf drei Control Planes (etcd-Quorum, privater API-Load-Balancer, Migration) erfassen.
 - [ ] Speicherstrategie wählen (lokale PVCs + Node-Pinning oder getesteter verteilter Storage).
 - [ ] Minecraft-Proxy und Anforderungen an Mandantentrennung festlegen; Anmeldung und Rollen (Schüler/Lehrkraft, E-Mail + Passwort + Code) aus dem bestehenden Adminpanel als Ausgangspunkt übernehmen.
@@ -62,7 +62,8 @@ Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/
 - [ ] CNI, DNS, StorageClass und grundlegende Pod-Kommunikation testen.
 - [ ] MeckMinecraft, NC3 und Codefield kontrolliert als **drei Worker in denselben Cluster** aufnehmen.
 - [ ] Worker-Ausfall, Rejoin und Recovery prüfen; separaten Ausfall der einzigen Control Plane simulieren und Auswirkungen dokumentieren.
-- [ ] Datastore-Backup und Restore der Control Plane praktisch testen.
+- [ ] Datastore-Backup der Control Plane einrichten (Snapshot → restic → Storage Box, eigener Schlüssel nur anhängen) und Restore auf einem frischen Server praktisch testen.
+- [ ] Ausgehenden Zugang der Nodes zur Storage Box (SSH, Port 23) in Firewall/NetworkPolicy vorsehen.
 
 **Gate:** Dedizierte Control Plane und alle drei Worker `Ready`; Cluster-Kommunikation funktioniert über private IPs; keine ungewollt öffentlichen Admin-Endpunkte.
 
@@ -110,7 +111,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 
 - [ ] Registry festlegen (z. B. GHCR privat oder eigene Registry wie Zot/Harbor) und Zugang per `imagePullSecret` einrichten.
 - [ ] Regel: Image-Tags sind unveränderlich; Tags, die ein Server verwendet oder verwendet hat, werden nie gelöscht.
-- [ ] Zusätzlich jedes freigegebene Image als OCI-Archiv (`skopeo copy … oci-archive:` bzw. `docker save`) mit Prüfsumme ins Archiv außerhalb des Clusters legen, damit ein Ausfall oder Verlust der Registry abgedeckt ist.
+- [ ] Zusätzlich jedes freigegebene Image als OCI-Archiv (`skopeo copy … oci-archive:` bzw. `docker save`) mit Prüfsumme auf die **Hetzner Storage Box** legen (eigenes Verzeichnis bzw. restic-Repository, Zugang der CI nur anhängen), damit ein Ausfall oder Verlust der Registry abgedeckt ist.
 - [ ] Zu jedem Image Build-Metadaten ablegen: Minecraft-Version, BuildTools-Build, Liste und Prüfsummen der Plugin-Jars, Git-Commit des Dockerfiles.
 - [ ] Wiederherstellung testen: Image aus dem Archiv in eine leere Registry laden und einen Pod damit starten.
 
@@ -123,7 +124,8 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 - [ ] Zu jedem Backup festhalten, mit welchem Image-Tag es erstellt wurde (Restore nur mit passender oder neuerer Version).
 - [ ] Bestehende Backups ins Archiv übernehmen bzw. in den neuen Ablauf überführen: mineback-Tresor auf NC3 (`/var/lib/mineback`, 831 GB, Backups aller drei Hosts, nginx :8088 für `BACKUP_URL`) sowie manuelle Sicherungen in `/root/hostMC/backup*` (siehe [altsystem.md](altsystem.md), 3.5).
 - [ ] Vollständigen Restore einer Testwelt aus dem Archiv in ein neues PVC durchführen; Restore-Test regelmäßig wiederholen (siehe M5).
-- [ ] Überwachung: Alarm, wenn ein Backup fehlt, fehlschlägt oder das Archiv voll läuft.
+- [ ] Überwachung: Alarm, wenn ein Backup fehlt, fehlschlägt oder das Archiv voll läuft (Belegung der Storage Box, 5 TB; bei Bedarf auf BX31 wechseln).
+- [ ] Aufbewahrung auf der Storage Box mit dem Admin-Zugang (nicht im Cluster) per `restic forget --prune` umsetzen; Box-Snapshots als zusätzliche Absicherung.
 
 **Gate:** Testspieler verbinden sich; Daten überstehen Pod-Neustart; Cluster und Pilotserver erscheinen in Grafana und lösen Alerts aus; das produktive Image liegt in Registry und Archiv und lässt sich aus dem Archiv wiederherstellen; Backup ins Archiv und vollständiger Restore einer Welt sind nachgewiesen.
 
@@ -168,7 +170,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - [ ] Monitoring ergänzen: zentrale Logs, Kapazitätswarnungen, Alerts für Nodes, PVCs und Zertifikatsablauf (Grundausbau in M2).
 - [ ] Dokumentierte Update-/Patch-/Zertifikatsprozesse.
 - [ ] RBAC, NetworkPolicies, Secret-Management und Pod-Security prüfen.
-- [ ] Wiederkehrende Restore- und Ausfalltests.
+- [ ] Wiederkehrende Restore- und Ausfalltests, darunter mindestens einmal jährlich ein **Notfall-Restore aus der Storage Box** ohne Zugriff auf Cluster und Nodes (neuer Server, Schlüssel und Passwörter aus der Offline-Kopie).
 - [ ] Betriebshandbuch, SLOs und Verantwortlichkeiten definieren.
 
 **Gate:** Produktivbetrieb und Recovery-Prozesse sind dokumentiert und getestet.
@@ -183,7 +185,8 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 | P2 | Optionale Erweiterung auf drei Control Planes / etcd-HA | Netzwerkmessungen, Datastore-Migrationsprobe |
 | P0 | Persistenter Storage samt Restore | Storage-Auswahl |
 | P0 | Image-Pipeline, Registry und Image-Archiv | Konzept [dockerminecraft.md](dockerminecraft.md) |
-| P0 | Welt-Backup-Archiv außerhalb der Nodes mit Aufbewahrung und Restore-Test | Wahl des Archivspeichers |
+| P0 | Welt-Backup-Archiv auf der Hetzner Storage Box mit Aufbewahrung und Restore-Test | Storage Box (vorhanden) |
+| P0 | Datastore-Snapshots der Control Plane auf die Storage Box | Dedizierte Control Plane |
 | P0 | Gemeinsamen K3s-Cluster aufbauen | Control Plane, VPN |
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
@@ -216,6 +219,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - Lokale Weltdaten verhindern transparente Verschiebung zwischen Nodes.
 - Doppelter Weltzugriff verursacht Datenverlust.
 - Images lassen sich nicht reproduzierbar neu bauen (BuildTools, Plugin-Downloads); ohne Image-Archiv sind alte Welten ggf. nicht mehr startbar.
+- Die Storage Box ist eine einzelne Kopie bei einem Anbieter an einem Ort; sie schützt gegen Ausfälle bei netcup, nicht gegen einen gleichzeitigen Verlust von Produktivsystemen und Box. Box-Snapshots und Restore-Tests mindern das Risiko; eine zweite Offsite-Kopie ist bei Bedarf möglich.
 - Backups auf demselben Host oder im selben Rechenzentrum gehen bei einem Ausfall mit verloren. **Heute der Fall:** der Tresor aller Hosts liegt auf NC3 (Gegenmaßnahme: Abschnitt S).
 - Gehen die Schlüssel der verschlüsselten Offsite-Kopie verloren, ist die Kopie unbrauchbar; sie müssen offline und getrennt aufbewahrt werden.
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.

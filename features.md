@@ -20,6 +20,7 @@ Auf MeckMinecraft (`admin.meckminecraft.de`) und NC3 (`admin.cndrbrbr.de`) läuf
 | Protokoll | die letzten 40 Aktionen (wer hat was auf welchem Server getan) |
 | Dateien | FileZilla/SFTP je Server, chroot auf den eigenen Server (außerhalb der Weboberfläche) |
 | Backups | Wiederherstellen nur über den Steuerbefehl `restore <datum>` bzw. `restore latest`, **nicht** in der Weboberfläche |
+| Offsite-Backup | seit 16.11.2026 verschlüsselte Kopie des Backup-Tresors auf einer Hetzner Storage Box in Helsinki (restic, Zugang nur anhängen), siehe [backups.md](backups.md) |
 
 Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (auf MeckMinecraft).
 
@@ -29,7 +30,7 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | --- | --- | --- |
 | Gemeinsamer K3s-Cluster | Dedizierte Control Plane auf neuem vierten Host, drei bestehende Worker über gesichertes privates Netz | Control Plane und alle drei Worker erscheinen `Ready`; interner Pod-Verkehr funktioniert |
 | Dedizierte Control Plane | K3s-Steuerung getrennt von Minecraft-Last; keine regulären Spielserver-Pods auf dem Control-Plane-Host | K3s-API nur administrativ erreichbar; Minecraft-Pods laufen ausschließlich auf Workern |
-| Control-Plane-Backup & Recovery | Sicherung des K3s-Datastores und getestete Wiederherstellung | Wiederanlauf der Single Control Plane ist dokumentiert und im Test erfolgreich |
+| Control-Plane-Backup & Recovery | Sicherung des K3s-Datastores als verschlüsselter Snapshot auf die Hetzner Storage Box und getestete Wiederherstellung | Wiederanlauf der Single Control Plane ist dokumentiert und im Test erfolgreich |
 | SPOF-Transparenz | Bei nur einer Control Plane Ausfallfolgen sichtbar dokumentieren | Ausfalltest bestätigt Grenzen von Scheduling und Verwaltung; laufende Pods und Abhängigkeiten werden getrennt bewertet |
 | Node-/Kapazitätsübersicht | CPU, RAM, Storage, Pod-Status pro Node | Dashboard/API zeigt aktuelle Messwerte und Warnungen |
 | Minecraft-Server erstellen | Servertyp, Image/Version, RAM, CPU, Storage auswählen | Ein gültiger Antrag erzeugt genau eine nutzbare Instanz |
@@ -42,8 +43,9 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | Spielerverwaltung **(Bestand)** | Whitelist und Operator-Rechte ohne Neustart (RCON) | Änderung wirkt sofort im laufenden Server |
 | Serverzuweisung **(Bestand)** | Lehrkräfte weisen Server Schülern zu, geben sie frei und setzen sie optional zurück | Schüler sieht nur seinen Server; nach Freigabe sofort kein Zugriff mehr |
 | Dateizugang per SFTP **(Bestand)** | FileZilla-Zugang je Server mit bisherigem Port und Schlüssel (SFTP-Sidecar) | Schüler erreicht nur die Dateien des eigenen Servers |
-| Backup/Restore | Welt-Backups außerhalb des Clusters bei einem anderen Provider an einem anderen Standort, verschlüsselt, mit längerer Aufbewahrung | Test-Restore einer Welt aus der Offsite-Kopie erfolgreich |
-| Restore in der Weboberfläche **(neu)** | Backups des Servers mit Datum, Art (automatisch/vor Migration, Versionswechsel, `wipe`) und Minecraft-Version anzeigen; Backup auswählen und ganz oder in Teilen (Welten, Plugins, Konfiguration) zurückspielen. Vorher wird der aktuelle Stand automatisch gesichert, der Server gestoppt und danach wieder gestartet. Schüler für ihren eigenen Server, Lehrkräfte für alle | Restore läuft ohne Steuerbefehl vollständig über die Weboberfläche; Bestätigungsdialog; Backups einer neueren Minecraft-Version als der laufenden werden abgelehnt; Eintrag im Aktionsprotokoll; der vorherige Stand lässt sich wiederum zurückholen |
+| Backup/Restore **(Offsite-Kopie: Bestand)** | Welt-Backups außerhalb des Clusters auf der **Hetzner Storage Box (Helsinki)**, also anderer Provider und anderer Standort; verschlüsselt mit restic, Zugang der Backup-Jobs nur anhängen, längere Aufbewahrung, Box-Snapshots | Test-Restore einer Welt aus der Offsite-Kopie erfolgreich |
+| Image-Archiv | Jedes produktiv genutzte Minecraft-Image zusätzlich als OCI-Archiv mit Build-Metadaten auf der Storage Box | Image lässt sich aus dem Archiv in eine leere Registry laden und starten |
+| Restore in der Weboberfläche **(neu)** | Backups des Servers aus dem Archiv auf der Storage Box mit Datum, Art (automatisch/vor Migration, Versionswechsel, `wipe`) und Minecraft-Version anzeigen; Backup auswählen und ganz oder in Teilen (Welten, Plugins, Konfiguration) zurückspielen. Vorher wird der aktuelle Stand automatisch gesichert, der Server gestoppt und danach wieder gestartet. Schüler für ihren eigenen Server, Lehrkräfte für alle | Restore läuft ohne Steuerbefehl vollständig über die Weboberfläche; Bestätigungsdialog; Backups einer neueren Minecraft-Version als der laufenden werden abgelehnt; Eintrag im Aktionsprotokoll; der vorherige Stand lässt sich wiederum zurückholen |
 | Zugriffssicherheit **(Anmeldung/Rollen: Bestand)** | Anmeldung mit Passwort + E-Mail-Code, Rollen Schüler/Lehrkraft, RBAC, keine offenen Backend-Ports; kein Shell-/SSH-Befehlszugang für Nutzer | Nicht autorisierte Aktionen werden verweigert |
 | Aktionsprotokoll **(Bestand)** | Wer hat was auf welchem Server getan | Jede Aktion in der Weboberfläche ist nachvollziehbar |
 | Quotas und Limits | CPU/RAM/Storage je Instanz begrenzen | Unzulässige Anfragen werden vor Provisionierung abgelehnt |
