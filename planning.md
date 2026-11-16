@@ -16,7 +16,7 @@
 - [ ] Datastore und Sicherung/Wiederherstellung der einzelnen Control Plane festlegen.
 - [ ] Anforderungen an optionalen Phase-2-Ausbau auf drei Control Planes (etcd-Quorum, privater API-Load-Balancer, Migration) erfassen.
 - [ ] Speicherstrategie wählen (lokale PVCs + Node-Pinning oder getesteter verteilter Storage).
-- [ ] Minecraft-Proxy, Auth und Anforderungen an Mandantentrennung festlegen.
+- [ ] Minecraft-Proxy und Anforderungen an Mandantentrennung festlegen; Anmeldung und Rollen (Schüler/Lehrkraft, E-Mail + Passwort + Code) aus dem bestehenden Adminpanel als Ausgangspunkt übernehmen.
 
 **Gate:** Architekturentscheidung und Risikoliste schriftlich freigegeben.
 
@@ -84,16 +84,19 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 
 ### M3 – Cubbermine Control API / MVP
 
-- [ ] Ressourcen- und Berechtigungsmodell definieren.
+Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberfläche auf MeckMinecraft und NC3, siehe [features.md](features.md), Abschnitt „Bestand“). Es steuert die Server heute über SSH und RCON je Server; in Cubbermine spricht es stattdessen mit der Cubbermine API. PuTTY wird nicht mehr genutzt, FileZilla bleibt (SFTP-Sidecar, M2).
+
+- [ ] Ressourcen- und Berechtigungsmodell definieren; Rollen Schüler (nur zugewiesener Server) und Lehrkraft (alle Server) aus dem Bestand übernehmen und auf Kubernetes-RBAC/Namespaces abbilden.
 - [ ] Provisionierung als idempotente API/Controller implementieren.
 - [ ] Create, Start, Stop, Restart, Status und Delete (ohne Datenlöschung) implementieren.
 - [ ] Restore in der Weboberfläche: Backups des Servers aus dem Archiv auflisten, Auswahl ganz oder in Teilen (Welten, Plugins, Konfiguration) zurückspielen; vorher automatisches Sicherungs-Backup, Stopp/Start, Versionsprüfung, Bestätigung, Eintrag im Aktionsprotokoll (siehe [features.md](features.md)).
 - [ ] Separate bestätigungspflichtige Datenlöschung mit Retention/Backup.
 - [ ] Logs, Events und Node-Kapazität bereitstellen.
-- [ ] Adminpanel integrieren; Auth, RBAC und Quotas prüfen.
+- [ ] Adminpanel von SSH/RCON je Server auf die Cubbermine API umstellen (statt Neuentwicklung); Anmeldung, Rollen, RBAC und Quotas prüfen.
+- [ ] Alle Bestandsfunktionen über die API bereitstellen: Plugins (Katalog, Upload, Entfernen), Spieler (Whitelist, Operator), `server.properties` bearbeiten, Serverzuweisung/Freigabe/Zurücksetzen, Aktionsprotokoll.
 - [ ] Tests für Fehlerfälle, doppelte Requests und unzureichende Ressourcen.
 
-**Gate:** Eine Minecraft-Instanz lässt sich über das Adminpanel vollständig verwalten, einschließlich Restore eines Backups aus dem Archiv.
+**Gate:** Eine Minecraft-Instanz lässt sich über das Adminpanel vollständig verwalten, mindestens im Umfang des heutigen Adminpanels und einschließlich Restore eines Backups aus dem Archiv; das Adminpanel braucht keinen SSH-Zugang zu den Servern mehr.
 
 ### M4 – Gestaffelte Migration
 
@@ -101,6 +104,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 - [ ] Für jede Instanz: Wartungsfenster, konsistentes Backup, Plugins/Mod-Versionen, Konfiguration, Welt-Import und Port-/DNS-Umschaltung planen.
 - [ ] Funktion, Minecraft-Version, Plugins und Datenintegrität nach dem Umzug testen.
 - [ ] Rückfall auf Compose vorbereiten; niemals zwei Server gleichzeitig dieselbe Welt beschreiben lassen.
+- [ ] Adminpanel umziehen: die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) zu einer Cubbermine-Weboberfläche zusammenführen oder je Standort weiterführen (Entscheidung); Konten, Rollen, Serverzuweisungen und Aktionsprotokoll übernehmen; Domains umschalten; Schüler-SFTP-Schlüssel bleiben gültig.
 - [ ] Omasys, NonameQuiz, Workshop-Websites und Monitoring **separat** hinsichtlich Migration bewerten.
 
 **Gate:** Abgenommene Minecraft-Server sind stabil, Wiederherstellung und Rollback sind erprobt.
@@ -128,9 +132,9 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 | P0 | Welt-Backup-Archiv außerhalb der Nodes mit Aufbewahrung und Restore-Test | Wahl des Archivspeichers |
 | P0 | Gemeinsamen K3s-Cluster aufbauen | Control Plane, VPN |
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
-| P0 | Cubbermine API + Basis-UI | Kubernetes-Pilot |
+| P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
 | P0 | Sicherheitsgrundlagen/Monitoring | Cluster |
-| P1 | Migration von mc1 bis mc5, Lobby/Proxy | MVP-Abnahme |
+| P1 | Migration von mc1 bis mc5, Lobby/Proxy und Adminpanel (Konten, Zuweisungen) | MVP-Abnahme |
 | P1 | Mods/Plugins, Templates, Multi-Tenant | API und Quotas |
 | P2 | Automatisches Failover / Self-Service | HA-/Storage-Nachweis |
 
