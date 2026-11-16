@@ -33,7 +33,9 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 | [architecture.md](architecture.md) | Aktuelle Infrastruktur und K3s-Zielarchitektur mit Mermaid-Diagrammen |
 | [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
 | [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung |
+| [dockerminecraft.md](dockerminecraft.md) | Analyse der bestehenden Minecraft-Docker-Images und Container-/Pod-Konzept für Cubbermine mit Architekturdiagramm |
 | [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag zur Prüfung der Verbindungen zwischen den Hosts |
-| [messdaten/](messdaten/) | Messskripte und bislang abgelegte Messdaten |
+| [messdaten/](messdaten/) | Rohdaten der Netzwerkmessung |
+| [perfscripts/](perfscripts/) | Mess- und Auswerteskripte der Netzwerkmessung |
 
 Die Reihenfolge der Umsetzung und technische Entscheidungen werden anhand der Messungen und Pilotversuche überprüft.
