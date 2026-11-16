@@ -88,7 +88,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 - [ ] Aufbewahrung festlegen und automatisieren, Vorschlag: täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; zusätzlich ein Backup vor jeder Migration, jedem Versionswechsel und jedem `wipe`, das nicht automatisch gelöscht wird.
 - [ ] Prüfsummen und Verschlüsselung der Archive; Zugangsdaten nur als Secret.
 - [ ] Zu jedem Backup festhalten, mit welchem Image-Tag es erstellt wurde (Restore nur mit passender oder neuerer Version).
-- [ ] Bestehende Backups (Backup-Server auf NC3, `BACKUP_URL`; mineback auf Codefield) ins Archiv übernehmen bzw. in den neuen Ablauf überführen.
+- [ ] Bestehende Backups ins Archiv übernehmen bzw. in den neuen Ablauf überführen: mineback-Tresor auf NC3 (`/var/lib/mineback`, 831 GB, Backups aller drei Hosts, nginx :8088 für `BACKUP_URL`) sowie manuelle Sicherungen in `/root/hostMC/backup*` (siehe [altsystem.md](altsystem.md), 3.5).
 - [ ] Vollständigen Restore einer Testwelt aus dem Archiv in ein neues PVC durchführen; Restore-Test regelmäßig wiederholen (siehe M5).
 - [ ] Überwachung: Alarm, wenn ein Backup fehlt, fehlschlägt oder das Archiv voll läuft.
 

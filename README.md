@@ -35,6 +35,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 
 | Dokument | Inhalt |
 | --- | --- |
+| [altsystem.md](altsystem.md) | Beschreibung des heute laufenden Altsystems (drei Docker-Compose-Hosts): Architektur, technischer Aufbau, Ports, Backups, Monitoring, Befunde |
 | [architecture.md](architecture.md) | Aktuelle Infrastruktur und K3s-Zielarchitektur mit Mermaid-Diagrammen |
 | [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
 | [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung, inkl. Image- und Backup-Archiv (M2) |

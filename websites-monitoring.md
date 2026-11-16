@@ -140,6 +140,7 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 | Forge-Server | Forge hängt eine Kennung an die Adresse im Handshake an | Mit dem Forge-Server `nc3-mc1` im Pilot testen |
 | Ausfall von mc-router | Kein Minecraft-Server mehr erreichbar | 2 Replicas, Überwachung durch den externen Wächter |
 | Nur Java-Edition | Bedrock-Clients (Konsolen, Handy) nutzen UDP und werden nicht unterstützt | heute ebenfalls nicht unterstützt |
+| Nur TCP | Der Voice-Chat des Forge-Servers `nc3-mc1` (Simple Voice Chat, **24454/udp**) läuft nicht über mc-router | eigener UDP-Service für Port 24454 am Ingress-Node |
 
 ### 2.5 Weiterleitungen und Übergang
 
