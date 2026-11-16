@@ -24,6 +24,7 @@
 
 - [ ] Privates WireGuard-/Overlay-Netz mit definierten Node-IP-Adressen aufbauen.
 - [ ] Firewall/SSH/Kubernetes-API absichern und benötigte Cluster-Ports dokumentieren.
+- [ ] K3s-Ingress/ServiceLB so einrichten, dass er die Ports 80/443 der Hosts noch nicht belegt (dort laufen die bestehenden Caddy-Instanzen), siehe [websites-monitoring.md](websites-monitoring.md), Abschnitt 2.3.
 - [ ] K3s nichtproduktiv **auf dem neuen dedizierten Control-Plane-Host** installieren; Minecraft-Workloads dort ausschließen.
 - [ ] CNI, DNS, StorageClass und grundlegende Pod-Kommunikation testen.
 - [ ] MeckMinecraft, NC3 und Codefield kontrolliert als **drei Worker in denselben Cluster** aufnehmen.
@@ -59,6 +60,16 @@ Grundlage ist das Container- und Pod-Konzept in [dockerminecraft.md](dockerminec
 - [ ] RAM/CPU/Storage-Limits, Startverhalten, Restart, Probes und Speichern der Welt bei SIGTERM validieren.
 - [ ] Node-Absturz mit lokalem/nichtlokalem Storage reproduzieren und dokumentieren.
 
+**Monitoring im Cluster** (Konzept: [websites-monitoring.md](websites-monitoring.md))
+
+- [ ] Vorab im Bestand beheben: Prometheus (:9090) und Grafana (:3000) nicht mehr öffentlich, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen; lokale Änderungen von minecraftDash einchecken.
+- [ ] kube-prometheus-stack im Namespace `monitoring` mit PVC und festgelegter Aufbewahrung installieren; bisherige Compose-Ziele zusätzlich statisch scrapen.
+- [ ] Minecraft-Pods per `PodMonitor` (Port 9940) erfassen; Labels `server_name` und `machine` beibehalten.
+- [ ] Grafana mit bestehenden Dashboards, Alert-Regeln und Discord-Benachrichtigung aus Git provisionieren (Webhook und Admin-Passwort als Secret), Ingress mit TLS.
+- [ ] Entscheiden, ob Prometheus-Historie und Grafana-Datenbank übernommen werden; ggf. kopieren.
+- [ ] Externen Wächter (Uptime-Check) und Watchdog-Alert einrichten, damit ein Cluster-Ausfall gemeldet wird.
+- [ ] Backup-Jobs überwachen (ersetzt `mineback-freshness`).
+
 **Archiv für Minecraft-Images**
 
 Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird immer in der neuesten Fassung geladen, und Plugin-Downloads können sich ändern oder verschwinden. Jedes Image, das je produktiv lief, wird deshalb aufbewahrt.
@@ -80,7 +91,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 - [ ] Vollständigen Restore einer Testwelt aus dem Archiv in ein neues PVC durchführen; Restore-Test regelmäßig wiederholen (siehe M5).
 - [ ] Überwachung: Alarm, wenn ein Backup fehlt, fehlschlägt oder das Archiv voll läuft.
 
-**Gate:** Testspieler verbinden sich; Daten überstehen Pod-Neustart; das produktive Image liegt in Registry und Archiv und lässt sich aus dem Archiv wiederherstellen; Backup ins Archiv und vollständiger Restore einer Welt sind nachgewiesen.
+**Gate:** Testspieler verbinden sich; Daten überstehen Pod-Neustart; Cluster und Pilotserver erscheinen in Grafana und lösen Alerts aus; das produktive Image liegt in Registry und Archiv und lässt sich aus dem Archiv wiederherstellen; Backup ins Archiv und vollständiger Restore einer Welt sind nachgewiesen.
 
 ### M3 – Cubbermine Control API / MVP
 
@@ -105,13 +116,16 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - [ ] Funktion, Minecraft-Version, Plugins und Datenintegrität nach dem Umzug testen.
 - [ ] Rückfall auf Compose vorbereiten; niemals zwei Server gleichzeitig dieselbe Welt beschreiben lassen.
 - [ ] Adminpanel umziehen: Die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) werden zu **einer gemeinsamen Cubbermine-Weboberfläche** für alle Server zusammengeführt (Entscheidung 16.11.2026; auf welchem Node ein Server läuft, spielt im Cluster keine Rolle). Konten beider Instanzen zusammenführen (gleiche E-Mail = ein Konto), Rollen, Serverzuweisungen und Aktionsprotokolle übernehmen; Servernamen eindeutig machen (heute gibt es `mc1`–`mc5` auf beiden Hosts); beide bisherigen Domains auf die gemeinsame Oberfläche umleiten, Hauptdomain festlegen; Schüler-SFTP-Schlüssel bleiben gültig.
-- [ ] Omasys, NonameQuiz, Workshop-Websites und Monitoring **separat** hinsichtlich Migration bewerten.
+- [ ] **meckminecraft.de** umziehen ([websites-monitoring.md](websites-monitoring.md)): Homepage als Image, `/api/prometheus/` nur noch lesend, Grafana unter eigener Domain, `karte-inigresso` und weitere BlueMaps über den Ingress; danach Caddy auf MeckMinecraft stoppen und 80/443 an den Ingress übergeben.
+- [ ] **codefield.de** umziehen ([websites-monitoring.md](websites-monitoring.md)): Homepage und JavaScript-IDE als Deployments, Workshop-Server als StatefulSet nach [dockerminecraft.md](dockerminecraft.md) mit Upload (jsmn, :25580) und BlueMap über den Ingress; testo2c vorher klären; danach `caddy-proxy` auf Codefield stoppen.
+- [ ] Alte Compose-Stacks (minecraftDash, javascriptMinecraftWorkshopServer, caddy-proxy) bis zur Abnahme gestoppt aufbewahren, danach abbauen; Debian-node_exporter entfernen.
+- [ ] Omasys, NonameQuiz, Kookie und testo2c **separat** hinsichtlich Migration bewerten.
 
 **Gate:** Abgenommene Minecraft-Server sind stabil, Wiederherstellung und Rollback sind erprobt.
 
 ### M5 – Härtung und Betrieb
 
-- [ ] Monitoring, Alerts, zentrale Logs, Dashboards und Kapazitätswarnungen einrichten.
+- [ ] Monitoring ergänzen: zentrale Logs, Kapazitätswarnungen, Alerts für Nodes, PVCs und Zertifikatsablauf (Grundausbau in M2).
 - [ ] Dokumentierte Update-/Patch-/Zertifikatsprozesse.
 - [ ] RBAC, NetworkPolicies, Secret-Management und Pod-Security prüfen.
 - [ ] Wiederkehrende Restore- und Ausfalltests.
@@ -133,7 +147,9 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 | P0 | Gemeinsamen K3s-Cluster aufbauen | Control Plane, VPN |
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
-| P0 | Sicherheitsgrundlagen/Monitoring | Cluster |
+| P0 | Sicherheitsgrundlagen/Monitoring (kube-prometheus-stack, Grafana, externer Wächter) | Cluster |
+| P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana nicht öffentlich, Prometheus-Volume, minecraftDash einchecken | – |
+| P1 | Websites meckminecraft.de und codefield.de in den Cluster, Ingress übernimmt 80/443 | Ingress, Monitoring, Codefield-Server-Migration |
 | P1 | Migration von mc1 bis mc5, Lobby/Proxy und Adminpanel (Konten, Zuweisungen) | MVP-Abnahme |
 | P1 | Mods/Plugins, Templates, Multi-Tenant | API und Quotas |
 | P2 | Automatisches Failover / Self-Service | HA-/Storage-Nachweis |

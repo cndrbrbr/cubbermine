@@ -144,7 +144,8 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 - **Web-UI:** Weiterentwicklung des bestehenden Adminpanels (heute je eine Instanz auf MeckMinecraft und NC3). In Cubbermine gibt es **eine gemeinsame Weboberfläche für alle Server**, unabhängig davon, auf welchem Node sie laufen; die bisherigen Domains leiten dorthin um. Sie arbeitet über die Cubbermine API statt über SSH je Server; Deployment und HTTP Ingress/Gateway. Ingress ersetzt **nicht** automatisch einen Minecraft-TCP-Proxy. Einen SSH-Befehlszugang für Nutzer (früher PuTTY) gibt es nicht mehr.
 - **Dateizugang:** SFTP für FileZilla als Sidecar im Minecraft-Pod, eigener TCP-Service je Server, bisherige Ports und Schlüssel bleiben (siehe [dockerminecraft.md](dockerminecraft.md)).
 - **Storage:** PVC/StorageClass, getestete Backups und Restore. Lokaler Speicher bindet den Pod üblicherweise an einen Node; echtes Failover braucht geeignete Storage- und Datenstrategie.
-- **Betrieb:** Monitoring (Prometheus/Grafana), Probes, Logs, Alerts, Kubernetes Events.
+- **Websites:** meckminecraft.de (Homepage, Statusseite) und codefield.de (Homepage, JavaScript-IDE, Upload, Karte) als zustandslose Deployments hinter dem HTTP-Ingress; BlueMaps und der Skript-Upload laufen im jeweiligen Minecraft-Pod. Details: [websites-monitoring.md](websites-monitoring.md).
+- **Betrieb:** Monitoring mit kube-prometheus-stack (Prometheus, Alertmanager, node_exporter, kube-state-metrics) und Grafana im Namespace `monitoring`, Übernahme der bestehenden Dashboards und Discord-Alerts, externer Wächter für Cluster-Ausfälle; Probes, Logs, Kubernetes Events.
 
 ## Kubernetes-Ressourcen
 

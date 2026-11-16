@@ -18,6 +18,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
   - **Ergebnis: A – Geeignet**, für eine einzelne Control Plane wie auch für einen späteren etcd-HA-Verbund. Abschlussprüfung nach Messende am 17.11.2026, 22:05 Uhr.
 - **Container-Konzept:** Die bestehenden Minecraft-Images (minecraftHostingServer, theDocks/mcserverdockB) wurden analysiert. Daraus ist das Konzept für Image und Pod in Cubbermine entstanden: ein unveränderliches Image pro Minecraft-Version aus der CI, Java als Hauptprozess, Start/Stopp über `replicas 1/0`, SFTP-Sidecar für Schüler, Verwaltung über RCON, unverändertes Datenlayout für die Migration ([dockerminecraft.md](dockerminecraft.md)).
 - **Archiv eingeplant:** In M2 sind ein Archiv für alle produktiv genutzten Minecraft-Images und ein Archiv für Welt-Backups außerhalb der Worker-Nodes vorgesehen, jeweils mit Restore-Test.
+- **Websites und Monitoring eingeplant:** Die Übernahme von meckminecraft.de (Homepage, Statusseite, Grafana, Prometheus) und codefield.de (Homepage, JavaScript-IDE, Upload, Karte) in den Cluster ist geplant ([websites-monitoring.md](websites-monitoring.md)). Dabei fiel auf, dass Prometheus und Grafana heute direkt öffentlich erreichbar sind und Prometheus kein Volume hat; das soll vorab behoben werden.
 
 ## Anstehende Arbeiten
 
@@ -38,6 +39,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 | [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
 | [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung, inkl. Image- und Backup-Archiv (M2) |
 | [dockerminecraft.md](dockerminecraft.md) | Analyse der bestehenden Minecraft-Docker-Images und Container-/Pod-Konzept für Cubbermine mit Architekturdiagramm |
+| [websites-monitoring.md](websites-monitoring.md) | Übernahme von meckminecraft.de (mit Grafana/Prometheus) und codefield.de in den Cluster, Befunde im Bestand, Architekturdiagramm |
 | [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag und Ergebnisse der Netzwerkmessung zwischen den Hosts (Abschnitt 9) |
 | [messdaten/](messdaten/) | Rohdaten der Netzwerkmessung |
 | [perfscripts/](perfscripts/) | Mess- und Auswerteskripte der Netzwerkmessung |

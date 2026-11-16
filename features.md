@@ -59,6 +59,7 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | Monitoring/Alerts **(Server-Metriken: Bestand)** | Prometheus/Grafana mit Alarmen; bestehende Dashboards und Discord-Alerts übernehmen, um Node-/Pod-Sicht erweitern | Node-/Pod-Ausfälle lösen Benachrichtigung aus |
 | Wartungsmodus/Migration | Welten sichern, Dienst umstellen | Kontrollierter Wechsel mit Restore-/Rollback-Test |
 | DNS und Domains | Verbindungsadressen zentral verwalten | DNS/Proxy-Zuordnung ist dokumentiert |
+| Websites im Cluster **(Bestand)** | meckminecraft.de (Homepage, Statusseite, Grafana) und codefield.de (Homepage, JavaScript-IDE, Skript-Upload, Karte) laufen im Cluster hinter dem Ingress mit TLS ([websites-monitoring.md](websites-monitoring.md)) | Alle bisherigen Adressen funktionieren unverändert; Statusseite zeigt Live-Daten |
 | API und Audit | Dokumentierte REST API, vollständiges Audit über das heutige Aktionsprotokoll hinaus (auch API- und Kubernetes-Ereignisse) | Jede administrative Änderung nachvollziehbar |
 
 ## Phase 2 – optionaler HA-Ausbau
