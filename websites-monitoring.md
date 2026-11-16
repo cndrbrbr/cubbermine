@@ -91,7 +91,7 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 | `karte-softsurvival.meckminecraft.de` | BlueMap SoftSurvival (nc3 mc4) | `karte-softsurvival.cndrbrbr.de` |
 | `nc3-mc1.meckminecraft.de` … `nc3-mc5.meckminecraft.de` (Namensrouting, siehe 2.4) | bisherige NC3-Server | `cndrbrbr.de:25565` … `:25569` |
 
-Die Kartennamen und die Namen der NC3-Server sind Vorschläge; sie hängen mit der Frage nach eindeutigen Servernamen zusammen ([planning.md](planning.md), M4).
+**Festgelegt am 16.11.2026:** Die NC3-Server heißen künftig `nc3-mc1` … `nc3-mc5` (als Minecraft-Adresse, in der Weboberfläche und als Kubernetes-Name), die Karten wie in der Tabelle (`karte-ehle`, `karte-softsurvival`, `karte-workshop`, `karte-inigresso`). Die Server auf MeckMinecraft behalten `mc1` … `mc5`; damit sind alle Namen im gemeinsamen Cluster eindeutig ([planning.md](planning.md), M4).
 
 ### 2.2 cndrbrbr.de – andere Themen
 
@@ -327,7 +327,7 @@ flowchart TB
 2. **Grafana:** `grafana.meckminecraft.de` öffentlich mit Anmeldung oder nur über VPN.
 3. **Prometheus-Historie** übernehmen oder neu beginnen; Aufbewahrungsdauer.
 4. **Statusseite `server.html`:** bei direktem Prometheus-Zugriff aus dem Browser bleiben (mit Read-only-Proxy) oder auf einen kleinen eigenen Status-Endpunkt umstellen, der nur die nötigen Zahlen liefert.
-5. **Minecraft-Adressen:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge; endgültige Namen für die NC3-Server und die Karten.
+5. **Minecraft-Router:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge. (Die Namen der NC3-Server und Karten sind festgelegt, siehe 2.1.)
 6. **orbita2core-Adressen:** Unteradressen auf 443 (Vorschlag) oder bisherige Zusatzports; was `codefield.de` selbst zeigt.
 7. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
 8. **Ollama-Priorität:** Wie viel Rechenleistung darf die KI auf NC3 neben den Minecraft-Servern bekommen (feste 6 Kerne wie heute oder weniger mit niedrigerer Priorität)?
