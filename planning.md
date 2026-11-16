@@ -104,7 +104,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - [ ] Für jede Instanz: Wartungsfenster, konsistentes Backup, Plugins/Mod-Versionen, Konfiguration, Welt-Import und Port-/DNS-Umschaltung planen.
 - [ ] Funktion, Minecraft-Version, Plugins und Datenintegrität nach dem Umzug testen.
 - [ ] Rückfall auf Compose vorbereiten; niemals zwei Server gleichzeitig dieselbe Welt beschreiben lassen.
-- [ ] Adminpanel umziehen: die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) zu einer Cubbermine-Weboberfläche zusammenführen oder je Standort weiterführen (Entscheidung); Konten, Rollen, Serverzuweisungen und Aktionsprotokoll übernehmen; Domains umschalten; Schüler-SFTP-Schlüssel bleiben gültig.
+- [ ] Adminpanel umziehen: Die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) werden zu **einer gemeinsamen Cubbermine-Weboberfläche** für alle Server zusammengeführt (Entscheidung 16.11.2026; auf welchem Node ein Server läuft, spielt im Cluster keine Rolle). Konten beider Instanzen zusammenführen (gleiche E-Mail = ein Konto), Rollen, Serverzuweisungen und Aktionsprotokolle übernehmen; Servernamen eindeutig machen (heute gibt es `mc1`–`mc5` auf beiden Hosts); beide bisherigen Domains auf die gemeinsame Oberfläche umleiten, Hauptdomain festlegen; Schüler-SFTP-Schlüssel bleiben gültig.
 - [ ] Omasys, NonameQuiz, Workshop-Websites und Monitoring **separat** hinsichtlich Migration bewerten.
 
 **Gate:** Abgenommene Minecraft-Server sind stabil, Wiederherstellung und Rollback sind erprobt.

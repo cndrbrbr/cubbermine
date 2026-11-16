@@ -6,7 +6,7 @@
 
 ## Bestand: heutiges Adminpanel
 
-Auf MeckMinecraft (`admin.meckminecraft.de`) und NC3 (`admin.cndrbrbr.de`) läuft bereits eine Weboberfläche zur Verwaltung der Minecraft-Server. Sie ist der Ausgangspunkt für die Cubbermine-Weboberfläche. PuTTY wird für die Verwaltung nicht mehr genutzt; für Dateien verwenden Schüler weiterhin FileZilla (SFTP).
+Auf MeckMinecraft (`admin.meckminecraft.de`) und NC3 (`admin.cndrbrbr.de`) läuft bereits eine Weboberfläche zur Verwaltung der Minecraft-Server. Sie ist der Ausgangspunkt für die Cubbermine-Weboberfläche. In Cubbermine werden beide Instanzen zu **einer gemeinsamen Weboberfläche** für alle Server zusammengeführt; auf welchem Node ein Server läuft, sieht der Nutzer nicht. PuTTY wird für die Verwaltung nicht mehr genutzt; für Dateien verwenden Schüler weiterhin FileZilla (SFTP).
 
 | Bereich | Heute vorhanden |
 | --- | --- |
@@ -55,7 +55,7 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | Automatische Node-Wahl | Scheduler/Labels/Affinity berücksichtigen Kapazität | Platzierung ist reproduzierbar und begründet |
 | Mod-Verwaltung und Plugin-Rollback | Forge-Mods wie Plugins aus einem Katalog verwalten; Update und Rollback von Plugin-Versionen (die Plugin-Installation selbst ist P0) | Update und Rollback möglich |
 | Vorlagen | Paper, Spigot, Forge und weitere Profile | Neue Server aus versionierten Vorlagen startbar |
-| Mehrere Projekte/Mandanten | Namespace-Trennung und Rechte | Zugriff auf fremde Ressourcen ist technisch verhindert |
+| Mehrere Projekte/Mandanten | Namespace-Trennung und Rechte; in der gemeinsamen Weboberfläche z. B. Lehrkräfte nur für die Server ihres Projekts (heute getrennt durch die zwei Instanzen) | Zugriff auf fremde Ressourcen ist technisch verhindert |
 | Monitoring/Alerts **(Server-Metriken: Bestand)** | Prometheus/Grafana mit Alarmen; bestehende Dashboards und Discord-Alerts übernehmen, um Node-/Pod-Sicht erweitern | Node-/Pod-Ausfälle lösen Benachrichtigung aus |
 | Wartungsmodus/Migration | Welten sichern, Dienst umstellen | Kontrollierter Wechsel mit Restore-/Rollback-Test |
 | DNS und Domains | Verbindungsadressen zentral verwalten | DNS/Proxy-Zuordnung ist dokumentiert |
