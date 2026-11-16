@@ -18,7 +18,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
   - **Ergebnis: A – Geeignet**, für eine einzelne Control Plane wie auch für einen späteren etcd-HA-Verbund. Abschlussprüfung nach Messende am 17.11.2026, 22:05 Uhr.
 - **Container-Konzept:** Die bestehenden Minecraft-Images (minecraftHostingServer, theDocks/mcserverdockB) wurden analysiert. Daraus ist das Konzept für Image und Pod in Cubbermine entstanden: ein unveränderliches Image pro Minecraft-Version aus der CI, Java als Hauptprozess, Start/Stopp über `replicas 1/0`, SFTP-Sidecar für Schüler, Verwaltung über RCON, unverändertes Datenlayout für die Migration ([dockerminecraft.md](dockerminecraft.md)).
 - **Archiv eingeplant:** In M2 sind ein Archiv für alle produktiv genutzten Minecraft-Images und ein Archiv für Welt-Backups außerhalb der Worker-Nodes vorgesehen, jeweils mit Restore-Test.
-- **Websites und Monitoring eingeplant:** Die Übernahme von meckminecraft.de (Homepage, Statusseite, Grafana, Prometheus) und codefield.de (Homepage, JavaScript-IDE, Upload, Karte) in den Cluster ist geplant ([websites-monitoring.md](websites-monitoring.md)). Dabei fiel auf, dass Prometheus und Grafana heute direkt öffentlich erreichbar sind und Prometheus kein Volume hat; das soll vorab behoben werden.
+- **Adresskonzept und Dienste eingeplant:** **meckminecraft.de** wird die Hauptadresse für Minecraft (inkl. gemeinsamer Weboberfläche, Grafana und des JavaScript-Workshops, der von codefield.de umzieht), **cndrbrbr.de** bleibt für Omasys, NonameQuiz mit lokaler KI und Kookie, **codefield.de** geht an orbita2core. Die Übernahme aller dieser Dienste samt Monitoring in den Cluster ist geplant ([websites-monitoring.md](websites-monitoring.md)). Dabei fiel auf, dass Prometheus und Grafana (MeckMinecraft) sowie Omasys (NC3) direkt über HTTP-Ports öffentlich erreichbar sind und Prometheus kein Volume hat; das soll vorab behoben werden.
 
 ## Anstehende Arbeiten
 
@@ -27,7 +27,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 3. **Control Plane bereitstellen und Cluster-Netz aufbauen (M1):** Server anmieten, WireGuard mit MTU 1420, K3s installieren, Datastore-Backup testen, die drei Worker aufnehmen.
 4. **Minecraft-Prototyp (M2):** Spigot-Image per CI bauen und archivieren, Testserver als StatefulSet mit PVC, SFTP-Sidecar und Proxy betreiben, Welt-Backup ins Archiv und vollständigen Restore nachweisen.
 5. **Cubbermine-Verwaltung (M3):** API/Adminpanel für Erstellen, Starten, Stoppen, Überwachen und Verwalten der Server; Befehle des bisherigen Dispatchers als API-Endpunkte.
-6. **Schrittweise migrieren (M4):** Server einzeln mit Backup und Rückfallmöglichkeit umziehen, Proxy und Lobby zuletzt.
+6. **Schrittweise migrieren (M4):** Server einzeln mit Backup und Rückfallmöglichkeit umziehen, Proxy und Lobby zuletzt; danach Websites und Dienste nach dem neuen Adresskonzept umziehen (meckminecraft.de mit Workshop, cndrbrbr.de, zuletzt orbita2core auf codefield.de).
 7. **Härtung und Betrieb (M5):** Monitoring, Alerts, regelmäßige Restore- und Ausfalltests.
 8. **Optional HA ausbauen (M1b):** später zwei weitere Control-Plane-Server, sofern Bedarf besteht; die Netzwerkqualität lässt es zu.
 
@@ -39,7 +39,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 | [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
 | [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung, inkl. Image- und Backup-Archiv (M2) |
 | [dockerminecraft.md](dockerminecraft.md) | Analyse der bestehenden Minecraft-Docker-Images und Container-/Pod-Konzept für Cubbermine mit Architekturdiagramm |
-| [websites-monitoring.md](websites-monitoring.md) | Übernahme von meckminecraft.de (mit Grafana/Prometheus) und codefield.de in den Cluster, Befunde im Bestand, Architekturdiagramm |
+| [websites-monitoring.md](websites-monitoring.md) | Adresskonzept (meckminecraft.de / cndrbrbr.de / codefield.de) und Übernahme aller Websites, Dienste und des Monitorings in den Cluster, Befunde im Bestand, Architekturdiagramm |
 | [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag und Ergebnisse der Netzwerkmessung zwischen den Hosts (Abschnitt 9) |
 | [messdaten/](messdaten/) | Rohdaten der Netzwerkmessung |
 | [perfscripts/](perfscripts/) | Mess- und Auswerteskripte der Netzwerkmessung |

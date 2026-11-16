@@ -2,7 +2,7 @@
 
 **Entscheidung:** **Variante B** – ein gemeinsamer Kubernetes/K3s-Cluster. **Phase 1:** neuer dedizierter Control-Plane-Server + drei bestehende Worker (MeckMinecraft, NC3, Codefield). **Phase 2 optional:** drei dedizierte Control Planes + dieselben drei Worker.
 
-**Stand:** 16.11.2026 (M2 um Container-Konzept und Archiv ergänzt). Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
+**Stand:** 16.11.2026 (M2 um Container-Konzept und Archiv ergänzt; Adresskonzept und alle Web-/Begleitdienste aufgenommen). Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
 
 ## Meilensteine
 
@@ -24,7 +24,7 @@
 
 - [ ] Privates WireGuard-/Overlay-Netz mit definierten Node-IP-Adressen aufbauen.
 - [ ] Firewall/SSH/Kubernetes-API absichern und benötigte Cluster-Ports dokumentieren.
-- [ ] K3s-Ingress/ServiceLB so einrichten, dass er die Ports 80/443 der Hosts noch nicht belegt (dort laufen die bestehenden Caddy-Instanzen), siehe [websites-monitoring.md](websites-monitoring.md), Abschnitt 2.3.
+- [ ] K3s-Ingress/ServiceLB so einrichten, dass er die Ports 80/443 der Hosts noch nicht belegt (dort laufen die bestehenden Caddy-Instanzen), siehe [websites-monitoring.md](websites-monitoring.md), Abschnitt 2.6.
 - [ ] K3s nichtproduktiv **auf dem neuen dedizierten Control-Plane-Host** installieren; Minecraft-Workloads dort ausschließen.
 - [ ] CNI, DNS, StorageClass und grundlegende Pod-Kommunikation testen.
 - [ ] MeckMinecraft, NC3 und Codefield kontrolliert als **drei Worker in denselben Cluster** aufnehmen.
@@ -62,13 +62,14 @@ Grundlage ist das Container- und Pod-Konzept in [dockerminecraft.md](dockerminec
 
 **Monitoring im Cluster** (Konzept: [websites-monitoring.md](websites-monitoring.md))
 
-- [ ] Vorab im Bestand beheben: Prometheus (:9090) und Grafana (:3000) nicht mehr öffentlich, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen; lokale Änderungen von minecraftDash einchecken.
+- [ ] Vorab im Bestand beheben: Prometheus (:9090) und Grafana (:3000) auf MeckMinecraft sowie Omasys (:3000) auf NC3 nicht mehr öffentlich, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen (auch Ollama); lokale Änderungen von minecraftDash einchecken.
 - [ ] kube-prometheus-stack im Namespace `monitoring` mit PVC und festgelegter Aufbewahrung installieren; bisherige Compose-Ziele zusätzlich statisch scrapen.
 - [ ] Minecraft-Pods per `PodMonitor` (Port 9940) erfassen; Labels `server_name` und `machine` beibehalten.
 - [ ] Grafana mit bestehenden Dashboards, Alert-Regeln und Discord-Benachrichtigung aus Git provisionieren (Webhook und Admin-Passwort als Secret), Ingress mit TLS.
 - [ ] Entscheiden, ob Prometheus-Historie und Grafana-Datenbank übernommen werden; ggf. kopieren.
 - [ ] Externen Wächter (Uptime-Check) und Watchdog-Alert einrichten, damit ein Cluster-Ausfall gemeldet wird.
 - [ ] Backup-Jobs überwachen (ersetzt `mineback-freshness`).
+- [ ] Erreichbarkeits-Checks für Omasys, NonameQuiz/Ollama, Kookie und orbita2core ergänzen.
 
 **Archiv für Minecraft-Images**
 
@@ -115,13 +116,19 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - [ ] Für jede Instanz: Wartungsfenster, konsistentes Backup, Plugins/Mod-Versionen, Konfiguration, Welt-Import und Port-/DNS-Umschaltung planen.
 - [ ] Funktion, Minecraft-Version, Plugins und Datenintegrität nach dem Umzug testen.
 - [ ] Rückfall auf Compose vorbereiten; niemals zwei Server gleichzeitig dieselbe Welt beschreiben lassen.
-- [ ] Adminpanel umziehen: Die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) werden zu **einer gemeinsamen Cubbermine-Weboberfläche** für alle Server zusammengeführt (Entscheidung 16.11.2026; auf welchem Node ein Server läuft, spielt im Cluster keine Rolle). Konten beider Instanzen zusammenführen (gleiche E-Mail = ein Konto), Rollen, Serverzuweisungen und Aktionsprotokolle übernehmen; Servernamen eindeutig machen (heute gibt es `mc1`–`mc5` auf beiden Hosts); beide bisherigen Domains auf die gemeinsame Oberfläche umleiten, Hauptdomain festlegen; Schüler-SFTP-Schlüssel bleiben gültig.
-- [ ] **meckminecraft.de** umziehen ([websites-monitoring.md](websites-monitoring.md)): Homepage als Image, `/api/prometheus/` nur noch lesend, Grafana unter eigener Domain, `karte-inigresso` und weitere BlueMaps über den Ingress; danach Caddy auf MeckMinecraft stoppen und 80/443 an den Ingress übergeben.
-- [ ] **codefield.de** umziehen ([websites-monitoring.md](websites-monitoring.md)): Homepage und JavaScript-IDE als Deployments, Workshop-Server als StatefulSet nach [dockerminecraft.md](dockerminecraft.md) mit Upload (jsmn, :25580) und BlueMap über den Ingress; testo2c vorher klären; danach `caddy-proxy` auf Codefield stoppen.
-- [ ] Alte Compose-Stacks (minecraftDash, javascriptMinecraftWorkshopServer, caddy-proxy) bis zur Abnahme gestoppt aufbewahren, danach abbauen; Debian-node_exporter entfernen.
-- [ ] Omasys, NonameQuiz, Kookie und testo2c **separat** hinsichtlich Migration bewerten.
+- [ ] Adminpanel umziehen: Die beiden Instanzen (`admin.meckminecraft.de`, `admin.cndrbrbr.de`) werden zu **einer gemeinsamen Cubbermine-Weboberfläche** für alle Server zusammengeführt (Entscheidung 16.11.2026; auf welchem Node ein Server läuft, spielt im Cluster keine Rolle). Konten beider Instanzen zusammenführen (gleiche E-Mail = ein Konto), Rollen, Serverzuweisungen und Aktionsprotokolle übernehmen; Servernamen eindeutig machen (heute gibt es `mc1`–`mc5` auf beiden Hosts); Hauptadresse ist **`admin.meckminecraft.de`** (Entscheidung 16.11.2026), `admin.cndrbrbr.de` leitet dorthin um; Schüler-SFTP-Schlüssel bleiben gültig.
+**Adressen und Web-/Begleitdienste** (Konzept und Adresstabellen: [websites-monitoring.md](websites-monitoring.md); Entscheidung 16.11.2026: **meckminecraft.de** = Minecraft, **cndrbrbr.de** = andere Themen, **codefield.de** = orbita2core)
 
-**Gate:** Abgenommene Minecraft-Server sind stabil, Wiederherstellung und Rollback sind erprobt.
+- [ ] Neue Adressen ankündigen (Homepage, Weboberfläche, E-Mail an Lehrkräfte), besonders die Minecraft-Adressen, die sich nicht weiterleiten lassen (`codefield.de:25565`, `cndrbrbr.de:25565–25569`).
+- [ ] Ingress mit TLS für alle Domains, neue DNS-Einträge unter `meckminecraft.de` und `codefield.de`, dauerhafte Weiterleitungen von den alten Adressen (`admin.cndrbrbr.de`, `karte*.cndrbrbr.de`, `*.codefield.de` des Workshops).
+- [ ] Minecraft-Router (z. B. mc-router) auf Port 25565: `meckminecraft.de` → BungeeCord/Lobby, `workshop.meckminecraft.de` → Workshop-Server, `nc3-mcN.meckminecraft.de` → bisherige NC3-Server.
+- [ ] **meckminecraft.de** umziehen: Homepage als Image, `/api/prometheus/` nur noch lesend, Grafana unter `grafana.meckminecraft.de`, BlueMaps unter `karte-*.meckminecraft.de`; danach Caddy auf MeckMinecraft stoppen und 80/443 an den Ingress übergeben.
+- [ ] **JavaScript-Workshop nach meckminecraft.de** umziehen: Workshop-Server als StatefulSet nach [dockerminecraft.md](dockerminecraft.md); Homepage `workshop.meckminecraft.de`, IDE `javascript.meckminecraft.de`, Upload `upload.meckminecraft.de` (jsmn, :25580), Karte `karte-workshop.meckminecraft.de`; Kurstexte und IDE auf feste codefield.de-Verweise prüfen; `codefield.de` leitet bis zum orbita2core-Umzug auf den Workshop weiter.
+- [ ] **cndrbrbr.de (NC3)** umziehen in den Namespace `cndrbrbr`: Omasys (Deployment + PVC + Secrets), NonameQuiz (Web als Image, KI-Proxy, Ollama fest auf NC3 mit 6 CPU / 8 GiB und Modell-PVC), Kookie (Web mit Basic Auth, Daten-PVC, vierteljährlicher Import als CronJob statt `kookie-import.timer`); Omasys- und Kookie-Daten in den Backup-Ablauf aufnehmen; danach `omasys-caddy` stoppen und 80/443 an den Ingress übergeben.
+- [ ] **orbita2core auf codefield.de** umziehen (nach dem Workshop): Orbital-Knoten als StatefulSets mit ihren Daten, Sim-Agenten, Adressen `node1–3`/`agent1–3.codefield.de` oder bisherige Zusatzports (Entscheidung); danach `caddy-proxy` auf Codefield stoppen.
+- [ ] Alte Compose-Stacks (minecraftDash, javascriptMinecraftWorkshopServer, caddy-proxy, omasys, nonamequiz-deploy, kookie, testo2c) bis zur Abnahme gestoppt aufbewahren, danach abbauen; Debian-node_exporter entfernen.
+
+**Gate:** Abgenommene Minecraft-Server sind stabil, Wiederherstellung und Rollback sind erprobt; alle Dienste sind unter den neuen Adressen erreichbar, die alten HTTP-Adressen leiten weiter.
 
 ### M5 – Härtung und Betrieb
 
@@ -148,8 +155,11 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
 | P0 | Sicherheitsgrundlagen/Monitoring (kube-prometheus-stack, Grafana, externer Wächter) | Cluster |
-| P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana nicht öffentlich, Prometheus-Volume, minecraftDash einchecken | – |
-| P1 | Websites meckminecraft.de und codefield.de in den Cluster, Ingress übernimmt 80/443 | Ingress, Monitoring, Codefield-Server-Migration |
+| P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana (meck) und Omasys (NC3) nicht öffentlich, Prometheus-Volume, minecraftDash einchecken | – |
+| P1 | Adresskonzept umsetzen: Ingress, Weiterleitungen, Minecraft-Router | Ingress, DNS |
+| P1 | meckminecraft.de und JavaScript-Workshop (von codefield.de) in den Cluster | Ingress, Monitoring, Minecraft-Pilot |
+| P1 | Omasys, NonameQuiz/Ollama, Kookie (cndrbrbr.de) in den Cluster | Ingress, Backup-Ablauf |
+| P1 | orbita2core auf codefield.de in den Cluster | Workshop-Umzug |
 | P1 | Migration von mc1 bis mc5, Lobby/Proxy und Adminpanel (Konten, Zuweisungen) | MVP-Abnahme |
 | P1 | Mods/Plugins, Templates, Multi-Tenant | API und Quotas |
 | P2 | Automatisches Failover / Self-Service | HA-/Storage-Nachweis |
@@ -175,5 +185,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - Backups auf demselben Host oder im selben Rechenzentrum gehen bei einem Ausfall mit verloren.
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.
 - Kollisionen mit bestehenden öffentlichen Ports und Reverse Proxies.
+- Geänderte Minecraft-Adressen (Workshop, NC3-Server) lassen sich nicht weiterleiten; ohne rechtzeitige Ankündigung finden Schüler ihre Server nicht mehr.
+- Die CPU-Inferenz von Ollama auf NC3 kann die Minecraft-Server auf demselben Node ausbremsen, wenn die Ressourcen nicht fest begrenzt sind.
 
 Siehe [architecture.md](architecture.md) für Architekturdiagramme und [features.md](features.md) für den Funktionsumfang.
