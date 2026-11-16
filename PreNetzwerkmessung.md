@@ -288,7 +288,7 @@ Die abschließende Entscheidung erfolgt erst nach Auswertung der Messdaten und p
 
 ## 9. Ergebnisse
 
-**Stand:** 15.11.2026. Phase A läuft noch: Kurzmessungen und iperf3-Tests sind fertig und ausgewertet, die Langzeitmessung läuft (Zeitplan in 9.6).
+**Stand:** 16.11.2026. Phase A ist weitgehend abgeschlossen: Kurzmessungen und iperf3-Tests sind ausgewertet, die Langzeitmessung ist nach rund 46,5 Stunden zwischenausgewertet (9.6) und läuft noch bis 17.11.2026, 22:05 Uhr.
 
 Rohdaten und Skripte liegen in [messdaten/](messdaten/).
 
@@ -365,15 +365,52 @@ Bewertung: Für K3s ist das **kein Ausschlusskriterium**. Der Effekt tritt nur a
 
 Der 2-Sekunden-Funktionstest vom 14.11.2026 ist nur noch der Vollständigkeit halber in [messdaten/iperf-funktionstest-2s/](messdaten/iperf-funktionstest-2s/) abgelegt.
 
-### 9.6 Offene Punkte
+### 9.6 Langzeitmessung (Zwischenauswertung nach 46,5 h)
+
+Messzeit: 14.11.2026, 22:05 Uhr bis 16.11.2026, 20:34 Uhr (Samstagabend bis Montagabend, zwei volle Tag-Nacht-Zyklen). Je Richtung 2.706–2.707 Messblöcke zu je 10 Pings, also rund 27.000 Pakete pro Richtung und gut 162.000 insgesamt. In keinem Log fehlt ein Messblock (kein Abstand über 75 s), alle sechs Units liefen durch. Rohdaten (gzip): [messdaten/langzeit/](messdaten/langzeit/), Auswerteskript: [messdaten/netmess-longterm-auswertung.py](messdaten/netmess-longterm-auswertung.py).
+
+| Quelle → Ziel | Pakete gesendet / verloren | Verlust | RTT min | RTT avg | Median | p99 | p99,9 | max | Jitter (mdev je Block, Ø) | Pakete > 10 ms |
+|---|---|---|---|---|---|---|---|---|---|---|
+| MeckMinecraft → NC3 | 27.060 / 10 | 0,037 % | 0,219 ms | 0,491 ms | 0,454 ms | 0,95 ms | 7,6 ms | 10,8 ms | 0,08 ms | 3 |
+| NC3 → MeckMinecraft | 27.070 / 9 | 0,033 % | 0,253 ms | 0,499 ms | 0,455 ms | 1,23 ms | 7,5 ms | 17,6 ms | 0,10 ms | 13 |
+| MeckMinecraft → Codefield | 27.060 / 10 | 0,037 % | 0,215 ms | 0,496 ms | 0,468 ms | 0,87 ms | 5,4 ms | 9,8 ms | 0,07 ms | 0 |
+| Codefield → MeckMinecraft | 27.070 / 0 | 0 % | 0,212 ms | 0,511 ms | 0,458 ms | 1,46 ms | 9,5 ms | 11,7 ms | 0,11 ms | 9 |
+| NC3 → Codefield | 27.070 / 8 | 0,030 % | 0,251 ms | 0,490 ms | 0,469 ms | 0,99 ms | 2,3 ms | 8,9 ms | 0,08 ms | 0 |
+| Codefield → NC3 | 27.070 / 0 | 0 % | 0,188 ms | 0,482 ms | 0,454 ms | 0,98 ms | 5,6 ms | 14,6 ms | 0,09 ms | 1 |
+
+**Latenz und Jitter:** Über die ganze Messung liegt die mittlere RTT auf allen Pfaden bei 0,48–0,51 ms, praktisch identisch mit der Kurzmessung (9.2). 99 % aller Pakete sind schneller als 1,5 ms. Ausreißer über 10 ms sind selten (höchstens 13 von 27.000 Paketen pro Richtung, Maximum 17,6 ms) und treten einzeln auf, nicht als länger erhöhte Phase. Der Jitter innerhalb eines Messblocks liegt im Mittel bei 0,07–0,11 ms.
+
+**Tag/Nacht:** Es gibt keinen Tagesgang. Der schlechteste Stundenmittelwert liegt je nach Pfad bei 0,52–0,60 ms, der beste bei 0,45–0,48 ms. Tagsüber (07–23 Uhr) und nachts unterscheiden sich die Mittelwerte um höchstens 0,04 ms. Die einzige messbare Erhöhung fällt in den iperf3-Lauf am 15.11.2026, 04:00–04:12 Uhr (Ø 1,25–1,36 ms auf den Pfaden mit MeckMinecraft, Spitzen bis 10,8 ms). Das ist die eigene Volllast und kein Netzproblem; es zeigt aber, dass ausgelastete Leitungen die Latenz anderer Verbindungen spürbar erhöhen (vgl. Hinweis zu großen Übertragungen in 9.5).
+
+**Paketverlust – ein einzelnes Ereignis:** Alle Verluste stammen aus **einem Ereignis am 16.11.2026 um 05:17 Uhr** (Montagfrüh); außerhalb davon ging in 46,5 Stunden kein einziges Paket verloren.
+
+| Host | Messblock | Ergebnis |
+|---|---|---|
+| NC3 → Codefield / MeckMinecraft | 05:17:38 | nur die ersten 1–2 Pings beantwortet, danach 8 bzw. 9 von 10 verloren |
+| MeckMinecraft → NC3 / Codefield | 05:17:43 | 10 von 10 verloren |
+| Codefield → NC3 / MeckMinecraft | 05:17:32 und 05:18:33 | vollständig, beide Blöcke liegen außerhalb des Ausfallfensters |
+| alle | ab 05:18:33 | wieder normal (Ø 0,4–0,5 ms) |
+
+Die Unterbrechung begann also gegen 05:17:38 Uhr, dauerte mindestens 7 Sekunden und war spätestens um 05:18:33 Uhr vorbei. Passend dazu meldet Docker auf NC3 um 05:17:57 Uhr einen Timeout beim externen DNS-Server des Providers (46.38.225.230); auch Verkehr nach außen war also betroffen. In den Journals der drei Hosts gibt es zu dieser Zeit keine lokale Ursache (kein Neustart, keine Netzwerkänderung, nur der normale stündliche Cron-Lauf um 05:17:01 Uhr). Da NC3 und MeckMinecraft gleichzeitig betroffen waren, liegt die Ursache sehr wahrscheinlich beim Provider (Router/Switch oder Wartung). Ob Codefield ebenfalls betroffen war, lässt sich nicht sagen, weil dort zwischen 05:17:34 und 05:18:33 Uhr nicht gemessen wurde.
+
+**Bewertung nach Abschnitt 4:**
+
+- Mittlere RTT: 0,48–0,51 ms → **Gut** (< 10 ms)
+- Jitter: 0,07–0,11 ms im Mittel, Gesamtstreuung (σ) 0,18–0,51 ms → **Gut** (< 2 ms)
+- Paketverlust: 0,03–0,04 % auf vier Pfaden, 0 % auf zwei → formal **Prüfbedarf** (> 0–0,1 %). Der Verlust geht aber vollständig auf die eine Unterbrechung zurück und ist nicht über die Zeit verteilt.
+- Stabilität: eine einzelne kurze Unterbrechung (Sekunden bis höchstens 1 Minute) in 46,5 h → **Prüfbedarf** („Einzelne Unterbrechungen“), keine wiederkehrenden Ausfälle.
+
+Für K3s ist eine Unterbrechung dieser Länge unkritisch: Der Node-Status wechselt erst nach 40 s ohne Heartbeat auf `NotReady`, Pods werden standardmäßig erst nach 5 Minuten verdrängt. Für embedded etcd (Phase 2) könnte eine solche Unterbrechung eine Leader-Neuwahl auslösen; das Cluster erholt sich davon selbst, sollte aber überwacht werden. Tritt das Ereignis bis zum Ende der Messung (17.11.2026, 22:05 Uhr) nicht erneut auf, bleibt es bei einem Einzelfall.
+
+### 9.7 Offene Punkte
 
 | Punkt | Status |
 |---|---|
-| Langzeitmessung (alle 60 s 10 Pings, 6 Richtungen) | läuft seit 14.11.2026, 22:05 Uhr, endet automatisch am 17.11.2026, 22:05 Uhr; Auswertung nach ≥ 24 h |
+| Langzeitmessung (alle 60 s 10 Pings, 6 Richtungen) | Zwischenauswertung nach 46,5 h in 9.6; läuft noch bis 17.11.2026, 22:05 Uhr, danach kurze Abschlussprüfung (v. a. ob sich die Unterbrechung wiederholt) |
 | iperf3, 60 s je Richtung, mit und ohne `-R` | erledigt am 15.11.2026, 04:00–04:12 Uhr, ausgewertet in 9.5 |
 | Phase B (Control Plane, WireGuard, K3s) | wartet auf den zusätzlichen Server |
 
-### 9.7 Vorläufige Bewertung
+### 9.8 Vorläufige Bewertung
 
 Gemessen an den Orientierungswerten aus Abschnitt 4 sind alle Kurzzeitwerte **„Gut“**:
 
@@ -385,4 +422,4 @@ Einzelne Ausreißer bis 15,7 ms (Codefield → MeckMinecraft) sind vereinzelte S
 
 **Vorläufige Empfehlung: A – Geeignet.** Das Netz zwischen den drei Hosts genügt sowohl einem Cluster mit einer einzelnen Control Plane als auch den strengeren Anforderungen von embedded etcd (Phase 2). Für die neue Control Plane bietet sich derselbe Provider und dasselbe Rechenzentrum an, damit sie ebenfalls nur einen Hop entfernt ist.
 
-Die Durchsatzmessung (9.5) bestätigt die Empfehlung: Alle Richtungen erreichen die volle 1-Gbit/s-Anbindung. Einzige Einschränkung ist die hohe Retransmit-Quote von Codefield zu NC3 bei Volllast; große Übertragungen auf dieser Strecke sollten deshalb begrenzt werden. Endgültig ist die Empfehlung erst, wenn die Langzeitmessung ausgewertet ist.
+Die Durchsatzmessung (9.5) bestätigt die Empfehlung: Alle Richtungen erreichen die volle 1-Gbit/s-Anbindung. Einzige Einschränkung ist die hohe Retransmit-Quote von Codefield zu NC3 bei Volllast; große Übertragungen auf dieser Strecke sollten deshalb begrenzt werden. Die Langzeitmessung (9.6) bestätigt die Empfehlung ebenfalls: Latenz und Jitter bleiben über zwei Tage und Nächte unverändert bei rund 0,5 ms bzw. 0,1 ms, einen Tagesgang gibt es nicht. Einzige Auffälligkeit ist eine kurze, providerseitige Unterbrechung am 16.11.2026 um 05:17 Uhr (0,03–0,04 % Verlust auf vier Pfaden). Sie ist für eine einzelne Control Plane unkritisch; für embedded etcd sollte das Monitoring solche Unterbrechungen erfassen. **Empfehlung: A – Geeignet**, vorbehaltlich der Abschlussprüfung nach Messende am 17.11.2026.
