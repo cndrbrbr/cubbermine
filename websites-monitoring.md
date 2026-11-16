@@ -105,7 +105,7 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 
 | Adresse | Dienst |
 |---|---|
-| `codefield.de`, `www.codefield.de` | orbita2core (Einstiegsseite bzw. Weiterleitung, je nach Projekt) |
+| `codefield.de`, `www.codefield.de` | **Einstiegsseite von orbita2core** (Entscheidung 16.11.2026) |
 | `node1.codefield.de` … `node3.codefield.de` | Orbital-Knoten (heute `o2c.codefield.de:35581–35583`) |
 | `agent1.codefield.de` … `agent3.codefield.de` | Sim-Agenten (heute `o2c.codefield.de:35591–35593`) |
 
@@ -206,7 +206,7 @@ Grundsätze:
 |---|---|---|
 | Orbital-Knoten 1–3 | StatefulSet `orbital-node` (3 Replicas) oder drei einzelne StatefulSets, PVC je Knoten (Inhalt aus `testo2c_node1-data` …), Service je Knoten | Knoten haben eigenen Zustand, deshalb StatefulSet |
 | Sim-Agenten 1–3 | Deployment(s) bzw. StatefulSet, Service je Agent (:9200) | |
-| Einstieg (`codefield.de`) | Ingress mit TLS auf die orbita2core-Startseite bzw. -Weiterleitung | ersetzt `caddy-proxy` |
+| Einstiegsseite (`codefield.de`, `www.codefield.de`) | Deployment `orbita2core-start` (nginx mit statischer Seite als Image, gebaut in der CI aus dem testo2c-Repository), Service, Ingress mit TLS | **Neu zu erstellen:** testo2c hat bisher keine Webseite. Inhalt: kurze Projektbeschreibung, Links auf die Knoten und Agenten bzw. die Dokumentation, und ein deutlicher Hinweis „Der JavaScript-Workshop ist umgezogen → `workshop.meckminecraft.de`“ für Besucher mit alten Links |
 | Knoten/Agenten von außen | Ingress-Hosts `node1–3.codefield.de`, `agent1–3.codefield.de` auf 443 mit TLS | Zusatzports entfallen; Client-Konfiguration auf die neuen Adressen umstellen |
 
 ---
@@ -255,6 +255,7 @@ flowchart TB
         end
 
         subgraph o2c["Namespace orbita2core · codefield.de"]
+            o2cstart["Einstiegsseite<br/>codefield.de"]
             nodes["Orbital-Knoten 1–3<br/>StatefulSet + PVC"]
             agents["Sim-Agenten 1–3"]
         end
@@ -275,6 +276,7 @@ flowchart TB
     ingress --> omasys
     ingress --> nqweb --> nqproxy --> ollama
     ingress -->|"Basic Auth"| kookie
+    ingress --> o2cstart
     ingress --> nodes
     ingress --> agents
     mcplayers --> mcrouter
@@ -336,5 +338,4 @@ flowchart TB
 3. **Prometheus-Historie** übernehmen oder neu beginnen; Aufbewahrungsdauer.
 4. **Statusseite `server.html`:** bei direktem Prometheus-Zugriff aus dem Browser bleiben (mit Read-only-Proxy) oder auf einen kleinen eigenen Status-Endpunkt umstellen, der nur die nötigen Zahlen liefert.
 5. **Minecraft-Router:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge. (Die Namen der NC3-Server und Karten sind festgelegt, siehe 2.1.)
-6. **Startseite `codefield.de`:** was orbita2core unter der Hauptadresse zeigt (Einstiegsseite oder Weiterleitung). Die Adressen der Knoten und Agenten sind festgelegt (2.3).
-7. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
+6. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
