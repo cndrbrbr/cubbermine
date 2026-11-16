@@ -60,7 +60,7 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | Wartungsmodus/Migration | Welten sichern, Dienst umstellen | Kontrollierter Wechsel mit Restore-/Rollback-Test |
 | DNS und Domains | Verbindungsadressen zentral verwalten | DNS/Proxy-Zuordnung ist dokumentiert |
 | Websites und Dienste im Cluster **(Bestand)** | meckminecraft.de (Homepage, Statusseite, Grafana, JavaScript-Workshop mit IDE, Upload und Karte), cndrbrbr.de (Omasys, NonameQuiz mit lokaler KI, Kookie) und codefield.de (orbita2core) laufen im Cluster hinter dem Ingress mit TLS ([websites-monitoring.md](websites-monitoring.md)) | Alle Dienste unter den neuen Adressen erreichbar; alte HTTP-Adressen leiten weiter; Statusseite zeigt Live-Daten |
-| Minecraft-Adressen nach Namen | Ein Router auf Port 25565 verteilt nach Servername (`meckminecraft.de`, `workshop.meckminecraft.de`, `nc3-mcN.meckminecraft.de`) | Alle Server ohne Portnummer erreichbar |
+| Minecraft-Adressen nach Namen | mc-router auf Port 25565 verteilt nach Servername (`meckminecraft.de`, `workshop.meckminecraft.de`, `nc3-mcN.meckminecraft.de`) | Alle Server ohne Portnummer erreichbar |
 | API und Audit | Dokumentierte REST API, vollständiges Audit über das heutige Aktionsprotokoll hinaus (auch API- und Kubernetes-Ereignisse) | Jede administrative Änderung nachvollziehbar |
 
 ## Phase 2 – optionaler HA-Ausbau

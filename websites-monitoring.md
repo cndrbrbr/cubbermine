@@ -111,11 +111,35 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 
 **Festgelegt am 16.11.2026:** Knoten und Agenten bekommen eigene Unteradressen auf Port 443; die orbita2core-Clients können die Adresse frei einstellen. Die Zusatzports 35581–35583 und 35591–35593 entfallen, es werden keine weiteren Ports geöffnet. Beim Umzug müssen die Clients auf die neuen Adressen umgestellt werden.
 
-### 2.4 Minecraft-Adressen nach Namen
+### 2.4 Minecraft-Adressen nach Namen: mc-router
 
-Minecraft-Clients schicken beim Verbinden den eingegebenen Servernamen mit. Ein Router auf Port 25565 (z. B. **mc-router**) kann damit nach Namen verteilen: `meckminecraft.de` → BungeeCord/Lobby, `workshop.meckminecraft.de` → Workshop-Server, `nc3-mc1.meckminecraft.de` → bisheriger NC3-Server mc1 usw. Alle Server sind dann über **einen** Port erreichbar, ohne Portnummern in der Adresse; zusätzliche Ports wie 25566–25569 entfallen.
+**Festgelegt am 16.11.2026:** Alle Minecraft-Verbindungen laufen über **[mc-router](https://github.com/itzg/mc-router)** auf Port 25565.
 
-Alternative ohne Router: alle Server nur über den BungeeCord-Proxy (`/server …`) oder SRV-Einträge im DNS, die je Name auf einen eigenen Port zeigen.
+**Wie es funktioniert:** Ein Minecraft-Client schickt beim Verbinden als Erstes ein „Handshake“-Paket, in dem die eingegebene Serveradresse steht (z. B. `workshop.meckminecraft.de`). mc-router liest nur dieses Paket, sucht den passenden Server und leitet die TCP-Verbindung danach unverändert durch. Er ist kein Minecraft-Proxy wie BungeeCord: Er versteht das Spiel nicht, ändert nichts an den Daten und ist deshalb unabhängig von der Minecraft-Version.
+
+| Adresse | Ziel |
+|---|---|
+| `meckminecraft.de` (auch Standardziel für Adressen ohne passenden Eintrag, z. B. reine IP) | BungeeCord mit Lobby; von dort `/server …` wie bisher |
+| `workshop.meckminecraft.de` | Workshop-Server (direkt) |
+| `nc3-mc1.meckminecraft.de` … `nc3-mc5.meckminecraft.de` | bisherige NC3-Server (direkt) |
+
+**Im Cluster:**
+
+- Deployment `mc-router` im Namespace `minecraft` (zustandslos, 2 Replicas möglich), Service auf Port 25565 am Ingress-Node; die zusätzlichen Ports 25566–25569 entfallen.
+- **Automatische Einträge:** mc-router liest die Zuordnung aus Kubernetes selbst. Jeder Minecraft-Service bekommt die Annotation `mc-router.itzg.me/externalServerName: <adresse>`; legt die Cubbermine API einen Server an, ist er sofort unter seinem Namen erreichbar. Eine eigene Routing-Konfiguration entfällt.
+- **Server bei Bedarf starten:** mc-router kann einen gestoppten Server (StatefulSet mit `replicas: 0`) beim ersten Verbindungsversuch automatisch hochfahren. Das passt zu „Stopp = Herunterskalieren“ ([dockerminecraft.md](dockerminecraft.md)). Ob das genutzt wird, ist eine eigene Entscheidung (Ressourcen auf dem Node, Wartezeit für den ersten Spieler); im Pilot ausprobieren.
+- **Serverliste:** Auch die Statusabfrage der Serverliste geht nach Namen, jeder Eintrag zeigt Beschreibung und Spielerzahl des richtigen Servers.
+
+**Was dabei zu beachten ist:**
+
+| Punkt | Folge | Maßnahme |
+|---|---|---|
+| Direkt erreichte Server müssen Spieler selbst prüfen | Server hinter BungeeCord laufen mit `online-mode=false` und dürfen **niemals** direkt über mc-router erreichbar sein, sonst kann sich jeder als beliebiger Spieler ausgeben | Nur Server mit `online-mode=true` bekommen einen eigenen Namen; die BungeeCord-Backends (Lobby, meck mc1–mc5) nur über BungeeCord; zusätzlich NetworkPolicy: Backends nur vom BungeeCord erreichbar |
+| Echte Spieler-IP | Die direkt erreichten Spigot-Server sehen als Absender die Adresse von mc-router, nicht die des Spielers. Spigot kann das PROXY-Protokoll, mit dem mc-router die echte IP weitergeben könnte, nicht auswerten (BungeeCord und Paper können es) | IP-Sperren und IP-Logs auf diesen Servern wirken nicht; Sperren über Spielernamen/UUID und Whitelist (wie heute schon üblich). BungeeCord bekommt die echte IP per PROXY-Protokoll |
+| Adresse muss den Namen enthalten | Wer nur die IP oder eine alte Adresse eingibt, landet beim Standardziel (Lobby) | Neue Adressen ankündigen (2.5) |
+| Forge-Server | Forge hängt eine Kennung an die Adresse im Handshake an | Mit dem Forge-Server `nc3-mc1` im Pilot testen |
+| Ausfall von mc-router | Kein Minecraft-Server mehr erreichbar | 2 Replicas, Überwachung durch den externen Wächter |
+| Nur Java-Edition | Bedrock-Clients (Konsolen, Handy) nutzen UDP und werden nicht unterstützt | heute ebenfalls nicht unterstützt |
 
 ### 2.5 Weiterleitungen und Übergang
 
@@ -223,7 +247,7 @@ flowchart TB
     subgraph cluster["K3s-Cluster"]
         direction TB
         ingress["HTTP-Ingress 80/443<br/>TLS Let's Encrypt<br/>Weiterleitungen · Basic Auth"]
-        mcrouter["Minecraft-Router :25565<br/>Verteilung nach Servername"]
+        mcrouter["mc-router :25565<br/>Verteilung nach Servername"]
 
         subgraph meck["meckminecraft.de"]
             subgraph sites["Namespace websites"]
@@ -337,5 +361,5 @@ flowchart TB
 2. **Grafana:** `grafana.meckminecraft.de` öffentlich mit Anmeldung oder nur über VPN.
 3. **Prometheus-Historie** übernehmen oder neu beginnen; Aufbewahrungsdauer.
 4. **Statusseite `server.html`:** bei direktem Prometheus-Zugriff aus dem Browser bleiben (mit Read-only-Proxy) oder auf einen kleinen eigenen Status-Endpunkt umstellen, der nur die nötigen Zahlen liefert.
-5. **Minecraft-Router:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge. (Die Namen der NC3-Server und Karten sind festgelegt, siehe 2.1.)
+5. **Automatischer Serverstart über mc-router:** gestoppte Server beim ersten Verbindungsversuch hochfahren ja/nein (2.4). (mc-router selbst sowie die Namen der Server und Karten sind festgelegt.)
 6. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
