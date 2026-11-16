@@ -106,10 +106,10 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 | Adresse | Dienst |
 |---|---|
 | `codefield.de`, `www.codefield.de` | orbita2core (Einstiegsseite bzw. Weiterleitung, je nach Projekt) |
-| `node1.codefield.de` … `node3.codefield.de` | Orbital-Knoten (Vorschlag, heute `o2c.codefield.de:35581–35583`) |
-| `agent1.codefield.de` … `agent3.codefield.de` | Sim-Agenten (Vorschlag, heute `o2c.codefield.de:35591–35593`) |
+| `node1.codefield.de` … `node3.codefield.de` | Orbital-Knoten (heute `o2c.codefield.de:35581–35583`) |
+| `agent1.codefield.de` … `agent3.codefield.de` | Sim-Agenten (heute `o2c.codefield.de:35591–35593`) |
 
-Unteradressen auf Port 443 sind sauberer als Zusatzports und brauchen keine weiteren offenen Ports. Voraussetzung: In den orbita2core-Clients lässt sich die Adresse frei einstellen. Sonst bleiben die bisherigen Ports als zusätzliche Einstiegspunkte (Entrypoints) des Ingress erhalten.
+**Festgelegt am 16.11.2026:** Knoten und Agenten bekommen eigene Unteradressen auf Port 443; die orbita2core-Clients können die Adresse frei einstellen. Die Zusatzports 35581–35583 und 35591–35593 entfallen, es werden keine weiteren Ports geöffnet. Beim Umzug müssen die Clients auf die neuen Adressen umgestellt werden.
 
 ### 2.4 Minecraft-Adressen nach Namen
 
@@ -207,7 +207,7 @@ Grundsätze:
 | Orbital-Knoten 1–3 | StatefulSet `orbital-node` (3 Replicas) oder drei einzelne StatefulSets, PVC je Knoten (Inhalt aus `testo2c_node1-data` …), Service je Knoten | Knoten haben eigenen Zustand, deshalb StatefulSet |
 | Sim-Agenten 1–3 | Deployment(s) bzw. StatefulSet, Service je Agent (:9200) | |
 | Einstieg (`codefield.de`) | Ingress mit TLS auf die orbita2core-Startseite bzw. -Weiterleitung | ersetzt `caddy-proxy` |
-| Knoten/Agenten von außen | Ingress-Hosts `node1–3.codefield.de`, `agent1–3.codefield.de` auf 443 (Vorschlag) oder zusätzliche Ingress-Entrypoints auf 35581–35583/35591–35593 | abhängig davon, ob die Clients die Adresse frei einstellen können |
+| Knoten/Agenten von außen | Ingress-Hosts `node1–3.codefield.de`, `agent1–3.codefield.de` auf 443 mit TLS | Zusatzports entfallen; Client-Konfiguration auf die neuen Adressen umstellen |
 
 ---
 
@@ -336,5 +336,5 @@ flowchart TB
 3. **Prometheus-Historie** übernehmen oder neu beginnen; Aufbewahrungsdauer.
 4. **Statusseite `server.html`:** bei direktem Prometheus-Zugriff aus dem Browser bleiben (mit Read-only-Proxy) oder auf einen kleinen eigenen Status-Endpunkt umstellen, der nur die nötigen Zahlen liefert.
 5. **Minecraft-Router:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge. (Die Namen der NC3-Server und Karten sind festgelegt, siehe 2.1.)
-6. **orbita2core-Adressen:** Unteradressen auf 443 (Vorschlag) oder bisherige Zusatzports; was `codefield.de` selbst zeigt.
+6. **Startseite `codefield.de`:** was orbita2core unter der Hauptadresse zeigt (Einstiegsseite oder Weiterleitung). Die Adressen der Knoten und Agenten sind festgelegt (2.3).
 7. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
