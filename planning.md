@@ -2,7 +2,7 @@
 
 **Entscheidung:** **Variante B** – ein gemeinsamer Kubernetes/K3s-Cluster. **Phase 1:** neuer dedizierter Control-Plane-Server + drei bestehende Worker (MeckMinecraft, NC3, Codefield). **Phase 2 optional:** drei dedizierte Control Planes + dieselben drei Worker.
 
-**Stand:** 14.11.2026. Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
+**Stand:** 16.11.2026 (M2 um Container-Konzept und Archiv ergänzt). Dies ist ein Plan mit Abnahmekriterien, keine Aussage über erledigte Arbeit. Termine werden nach der technischen Bestandsaufnahme festgelegt.
 
 ## Meilensteine
 
@@ -44,14 +44,43 @@
 
 ### M2 – Minecraft-Workload-Prototyp
 
-- [ ] Ein Minecraft-StatefulSet (1 Replica) mit PVC, ConfigMap und Service bereitstellen.
+Grundlage ist das Container- und Pod-Konzept in [dockerminecraft.md](dockerminecraft.md) (Analyse von minecraftHostingServer und theDocks/mcserverdockB, Image-Aufbau, Pod-Aufbau, offene Entscheidungen in Abschnitt 8).
+
+**Image und Pod**
+
+- [ ] Offene Entscheidungen aus [dockerminecraft.md](dockerminecraft.md), Abschnitt 8 treffen (Registry, Versionsliste, SFTP-Sidecar, Storage, Proxy).
+- [ ] Spigot-Image `cubbermine/spigot:<mc-version>-<build>` per CI bauen (Multi-Stage: BuildTools, Plugin-Katalog, GraalVM 25 Laufzeit, Nicht-root, Java als PID 1).
+- [ ] Image lokal gegen die Kopie eines bestehenden `mcN_data`-Volumes testen: Welt, Plugins, Whitelist und Ops werden unverändert übernommen.
+- [ ] Ein Minecraft-StatefulSet (1 Replica) mit PVC, ConfigMap, Secret und Service bereitstellen; initContainer für Konfiguration und Plugin-Sync.
+- [ ] SFTP-Sidecar mit bisherigem Port und Schülerschlüssel anbinden.
+- [ ] Start/Stopp über `replicas: 1/0`, Versionswechsel über Image-Tag nachweisen.
 - [ ] Minecraft-TCP-Proxy als separaten öffentlichen Einstieg einrichten.
-- [ ] Backends ausschließlich intern erreichbar machen.
-- [ ] RAM/CPU/Storage-Limits, Startverhalten, Restart und Readiness validieren.
-- [ ] Backup, externe Ablage und vollständigen Restore einer Testwelt durchführen.
+- [ ] Backends ausschließlich intern erreichbar machen (NetworkPolicy: Spielport nur vom Proxy, RCON nur von der API).
+- [ ] RAM/CPU/Storage-Limits, Startverhalten, Restart, Probes und Speichern der Welt bei SIGTERM validieren.
 - [ ] Node-Absturz mit lokalem/nichtlokalem Storage reproduzieren und dokumentieren.
 
-**Gate:** Testspieler verbinden sich; Daten überstehen Pod-Neustart; Backup/Restore ist nachgewiesen.
+**Archiv für Minecraft-Images**
+
+Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird immer in der neuesten Fassung geladen, und Plugin-Downloads können sich ändern oder verschwinden. Jedes Image, das je produktiv lief, wird deshalb aufbewahrt.
+
+- [ ] Registry festlegen (z. B. GHCR privat oder eigene Registry wie Zot/Harbor) und Zugang per `imagePullSecret` einrichten.
+- [ ] Regel: Image-Tags sind unveränderlich; Tags, die ein Server verwendet oder verwendet hat, werden nie gelöscht.
+- [ ] Zusätzlich jedes freigegebene Image als OCI-Archiv (`skopeo copy … oci-archive:` bzw. `docker save`) mit Prüfsumme ins Archiv außerhalb des Clusters legen, damit ein Ausfall oder Verlust der Registry abgedeckt ist.
+- [ ] Zu jedem Image Build-Metadaten ablegen: Minecraft-Version, BuildTools-Build, Liste und Prüfsummen der Plugin-Jars, Git-Commit des Dockerfiles.
+- [ ] Wiederherstellung testen: Image aus dem Archiv in eine leere Registry laden und einen Pod damit starten.
+
+**Archiv für Welt-Backups**
+
+- [ ] Archivspeicher außerhalb der Worker-Nodes festlegen (S3-kompatibler Objektspeicher oder Storage-Box beim Provider bzw. an einem anderen Standort); ein Backup auf demselben Host wie der Server zählt nicht als Archiv.
+- [ ] Backup-Job je Server: RCON `save-off` + `save-all flush`, `cfg`/`plugins`/`worlds` als ZIP im bisherigen `backup.sh`-Format, Upload ins Archiv, `save-on`.
+- [ ] Aufbewahrung festlegen und automatisieren, Vorschlag: täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; zusätzlich ein Backup vor jeder Migration, jedem Versionswechsel und jedem `wipe`, das nicht automatisch gelöscht wird.
+- [ ] Prüfsummen und Verschlüsselung der Archive; Zugangsdaten nur als Secret.
+- [ ] Zu jedem Backup festhalten, mit welchem Image-Tag es erstellt wurde (Restore nur mit passender oder neuerer Version).
+- [ ] Bestehende Backups (Backup-Server auf NC3, `BACKUP_URL`; mineback auf Codefield) ins Archiv übernehmen bzw. in den neuen Ablauf überführen.
+- [ ] Vollständigen Restore einer Testwelt aus dem Archiv in ein neues PVC durchführen; Restore-Test regelmäßig wiederholen (siehe M5).
+- [ ] Überwachung: Alarm, wenn ein Backup fehlt, fehlschlägt oder das Archiv voll läuft.
+
+**Gate:** Testspieler verbinden sich; Daten überstehen Pod-Neustart; das produktive Image liegt in Registry und Archiv und lässt sich aus dem Archiv wiederherstellen; Backup ins Archiv und vollständiger Restore einer Welt sind nachgewiesen.
 
 ### M3 – Cubbermine Control API / MVP
 
@@ -94,6 +123,8 @@
 | P0 | Single-Control-Plane-Backup, Restore und Ausfalltest | Dedizierte Control Plane |
 | P2 | Optionale Erweiterung auf drei Control Planes / etcd-HA | Netzwerkmessungen, Datastore-Migrationsprobe |
 | P0 | Persistenter Storage samt Restore | Storage-Auswahl |
+| P0 | Image-Pipeline, Registry und Image-Archiv | Konzept [dockerminecraft.md](dockerminecraft.md) |
+| P0 | Welt-Backup-Archiv außerhalb der Nodes mit Aufbewahrung und Restore-Test | Wahl des Archivspeichers |
 | P0 | Gemeinsamen K3s-Cluster aufbauen | Control Plane, VPN |
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Basis-UI | Kubernetes-Pilot |
@@ -105,7 +136,7 @@
 ## Definition of Done pro Workload
 
 1. Konfiguration und Version dokumentiert.
-2. Daten-Backup vorhanden und Restore getestet.
+2. Daten-Backup im Archiv vorhanden und Restore aus dem Archiv getestet; verwendetes Image ist archiviert.
 3. PVC, Service und Security-Policies definiert.
 4. Zugriff/Proxy-Routing und Logs überprüft.
 5. RAM/CPU unter realer Last überprüft.
@@ -119,6 +150,8 @@
 - Bei Phase-2-HA können Quorum-/Control-Plane-Ausfälle insbesondere durch hohe Latenz und ungeeignete Netzwerk-Topologie auftreten.
 - Lokale Weltdaten verhindern transparente Verschiebung zwischen Nodes.
 - Doppelter Weltzugriff verursacht Datenverlust.
+- Images lassen sich nicht reproduzierbar neu bauen (BuildTools, Plugin-Downloads); ohne Image-Archiv sind alte Welten ggf. nicht mehr startbar.
+- Backups auf demselben Host oder im selben Rechenzentrum gehen bei einem Ausfall mit verloren.
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.
 - Kollisionen mit bestehenden öffentlichen Ports und Reverse Proxies.
 

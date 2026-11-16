@@ -223,6 +223,7 @@ Einstellungen im Pod:
 - **PVC je Server** mit dem bisherigen Layout. Für den Pilot reicht `local-path` (K3s-Standard): schnell, aber an einen Node gebunden; fällt der Node aus, startet der Server erst wieder, wenn der Node zurück ist oder die Welt aus dem Backup wiederhergestellt wird. Netzwerkspeicher (z. B. Longhorn) ist eine spätere Entscheidung (siehe [architecture.md](architecture.md), offene Punkte 3) und hängt von Durchsatz und Latenz ab; die Messungen in [PreNetzwerkmessung.md](PreNetzwerkmessung.md) (1 Gbit/s, ~0,5 ms) machen es möglich, aber nicht kostenlos.
 - **Backup** als `CronJob` je Server bzw. als Job, den die API auslöst: RCON `save-off` + `save-all flush`, dann `cfg`/`plugins`/`worlds` als ZIP (gleiches Format wie `backup.sh`, damit `restore` weiter funktioniert), Upload auf ein Ziel außerhalb des Nodes, danach `save-on`. Der Job muss auf demselben Node laufen wie der Pod (RWO-Volume).
 - **Restore** = Server auf `replicas: 0`, Restore-Job entpackt in das PVC, `replicas: 1`.
+- **Archiv:** Welt-Backups und alle produktiv genutzten Images werden außerhalb der Worker-Nodes archiviert (Aufbewahrung, Prüfsummen, Restore-Tests). Die Aufgaben dazu stehen in [planning.md](planning.md), M2.
 - **Kein Doppelzugriff:** StatefulSet mit genau einem Replica und RWO-PVC; die Migration (Abschnitt 5) muss sicherstellen, dass Compose- und K3s-Server nie gleichzeitig dieselbe Welt schreiben.
 
 ### 4.7 Monitoring
@@ -361,7 +362,7 @@ sequenceDiagram
 
 ## 8. Offene Entscheidungen
 
-1. **Container-Registry:** GHCR (öffentlich/privat) oder eigene Registry im Cluster; Zugangsdaten als `imagePullSecret`.
+1. **Container-Registry und Archiv:** GHCR (öffentlich/privat) oder eigene Registry; Zugangsdaten als `imagePullSecret`. Dazu der Archivspeicher für Images (OCI-Archive) und Welt-Backups außerhalb der Nodes (siehe [planning.md](planning.md), M2).
 2. **Version pro Image oder pro Server:** Ein Image-Tag je Minecraft-Version deckt Spigot ab. Schüler, die heute frei per `version` beliebige Versionen bauen, bekommen nur noch eine freigegebene Liste – ist das gewollt?
 3. **SFTP-Sidecar vs. zentraler SFTP-Dienst:** Sidecar ist einfach und hält das bisherige Modell, kostet aber einen öffentlichen Port je Server. Ein zentraler Dienst (z. B. SFTPGo) bräuchte Zugriff auf alle PVCs – mit RWO-Volumes auf verschiedenen Nodes ist das schwierig.
 4. **Schreibrecht auf die Jar:** Bisher kann der Schüler alles in `/server` ändern; im Konzept liegt die Jar schreibgeschützt im Image. Für Ausnahmen bleibt der `custom`-Typ.
