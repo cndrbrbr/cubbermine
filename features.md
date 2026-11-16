@@ -19,6 +19,7 @@ Auf MeckMinecraft (`admin.meckminecraft.de`) und NC3 (`admin.cndrbrbr.de`) läuf
 | Lehrkräfte | Server an Schüler zuweisen und freigeben (optional zurücksetzen), Konten einladen/löschen, weitere Admins, Lobby nur für Admins |
 | Protokoll | die letzten 40 Aktionen (wer hat was auf welchem Server getan) |
 | Dateien | FileZilla/SFTP je Server, chroot auf den eigenen Server (außerhalb der Weboberfläche) |
+| Backups | Wiederherstellen nur über den Steuerbefehl `restore <datum|latest>`, **nicht** in der Weboberfläche |
 
 Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (auf MeckMinecraft).
 
@@ -42,6 +43,7 @@ Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (a
 | Serverzuweisung **(Bestand)** | Lehrkräfte weisen Server Schülern zu, geben sie frei und setzen sie optional zurück | Schüler sieht nur seinen Server; nach Freigabe sofort kein Zugriff mehr |
 | Dateizugang per SFTP **(Bestand)** | FileZilla-Zugang je Server mit bisherigem Port und Schlüssel (SFTP-Sidecar) | Schüler erreicht nur die Dateien des eigenen Servers |
 | Backup/Restore | Welt-Backups außerhalb des Nodes | Test-Restore einer Welt erfolgreich |
+| Restore in der Weboberfläche **(neu)** | Backups des Servers mit Datum, Art (automatisch/vor Migration, Versionswechsel, `wipe`) und Minecraft-Version anzeigen; Backup auswählen und ganz oder in Teilen (Welten, Plugins, Konfiguration) zurückspielen. Vorher wird der aktuelle Stand automatisch gesichert, der Server gestoppt und danach wieder gestartet. Schüler für ihren eigenen Server, Lehrkräfte für alle | Restore läuft ohne Steuerbefehl vollständig über die Weboberfläche; Bestätigungsdialog; Backups einer neueren Minecraft-Version als der laufenden werden abgelehnt; Eintrag im Aktionsprotokoll; der vorherige Stand lässt sich wiederum zurückholen |
 | Zugriffssicherheit **(Anmeldung/Rollen: Bestand)** | Anmeldung mit Passwort + E-Mail-Code, Rollen Schüler/Lehrkraft, RBAC, keine offenen Backend-Ports; kein Shell-/SSH-Befehlszugang für Nutzer | Nicht autorisierte Aktionen werden verweigert |
 | Aktionsprotokoll **(Bestand)** | Wer hat was auf welchem Server getan | Jede Aktion in der Weboberfläche ist nachvollziehbar |
 | Quotas und Limits | CPU/RAM/Storage je Instanz begrenzen | Unzulässige Anfragen werden vor Provisionierung abgelehnt |

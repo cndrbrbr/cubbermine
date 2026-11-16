@@ -87,12 +87,13 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 - [ ] Ressourcen- und Berechtigungsmodell definieren.
 - [ ] Provisionierung als idempotente API/Controller implementieren.
 - [ ] Create, Start, Stop, Restart, Status und Delete (ohne Datenlöschung) implementieren.
+- [ ] Restore in der Weboberfläche: Backups des Servers aus dem Archiv auflisten, Auswahl ganz oder in Teilen (Welten, Plugins, Konfiguration) zurückspielen; vorher automatisches Sicherungs-Backup, Stopp/Start, Versionsprüfung, Bestätigung, Eintrag im Aktionsprotokoll (siehe [features.md](features.md)).
 - [ ] Separate bestätigungspflichtige Datenlöschung mit Retention/Backup.
 - [ ] Logs, Events und Node-Kapazität bereitstellen.
 - [ ] Adminpanel integrieren; Auth, RBAC und Quotas prüfen.
 - [ ] Tests für Fehlerfälle, doppelte Requests und unzureichende Ressourcen.
 
-**Gate:** Eine Minecraft-Instanz lässt sich über das Adminpanel vollständig verwalten.
+**Gate:** Eine Minecraft-Instanz lässt sich über das Adminpanel vollständig verwalten, einschließlich Restore eines Backups aus dem Archiv.
 
 ### M4 – Gestaffelte Migration
 

@@ -224,7 +224,7 @@ Einstellungen im Pod:
 
 - **PVC je Server** mit dem bisherigen Layout. Für den Pilot reicht `local-path` (K3s-Standard): schnell, aber an einen Node gebunden; fällt der Node aus, startet der Server erst wieder, wenn der Node zurück ist oder die Welt aus dem Backup wiederhergestellt wird. Netzwerkspeicher (z. B. Longhorn) ist eine spätere Entscheidung (siehe [architecture.md](architecture.md), offene Punkte 3) und hängt von Durchsatz und Latenz ab; die Messungen in [PreNetzwerkmessung.md](PreNetzwerkmessung.md) (1 Gbit/s, ~0,5 ms) machen es möglich, aber nicht kostenlos.
 - **Backup** als `CronJob` je Server bzw. als Job, den die API auslöst: RCON `save-off` + `save-all flush`, dann `cfg`/`plugins`/`worlds` als ZIP (gleiches Format wie `backup.sh`, damit `restore` weiter funktioniert), Upload auf ein Ziel außerhalb des Nodes, danach `save-on`. Der Job muss auf demselben Node laufen wie der Pod (RWO-Volume).
-- **Restore** = Server auf `replicas: 0`, Restore-Job entpackt in das PVC, `replicas: 1`.
+- **Restore** = Server auf `replicas: 0`, Restore-Job entpackt in das PVC, `replicas: 1`. Ausgelöst wird er künftig in der **Weboberfläche** (heute nur per Steuerbefehl `restore`): Backup aus der Archivliste wählen, ganz oder nur Welten/Plugins/Konfiguration; die API sichert vorher den aktuellen Stand und prüft, dass das Backup nicht von einer neueren Minecraft-Version stammt.
 - **Archiv:** Welt-Backups und alle produktiv genutzten Images werden außerhalb der Worker-Nodes archiviert (Aufbewahrung, Prüfsummen, Restore-Tests). Die Aufgaben dazu stehen in [planning.md](planning.md), M2.
 - **Kein Doppelzugriff:** StatefulSet mit genau einem Replica und RWO-PVC; die Migration (Abschnitt 5) muss sicherstellen, dass Compose- und K3s-Server nie gleichzeitig dieselbe Welt schreiben.
 
@@ -349,7 +349,7 @@ sequenceDiagram
 | `restart: unless-stopped` + Bash-Schleife | `restartPolicy: Always` (Pod) |
 | `mc-ctrl` + `mc-dispatch.sh` (nur noch vom Adminpanel genutzt, PuTTY entfallen) | API-Endpunkte (RCON + Kubernetes-API) |
 | `version <x>` (BuildTools auf dem Volume) | Image-Tag wechseln |
-| `restore <datum>` (`mc-restore.sh`, `BACKUP_URL`) | Restore-Job der API |
+| `restore <datum>` (`mc-restore.sh`, `BACKUP_URL`; nicht in der Weboberfläche) | Restore-Job der API, ausgelöst über die Weboberfläche |
 | `MC_SERVER_TYPE=custom` | Image `cubbermine/custom-runtime`, `start.sh` vom PVC |
 | `adminpanel` mit Schlüsseln aus `keys/` | Cubbermine API mit ServiceAccount (RBAC) und RCON-Secrets |
 | `bungee` mit `depends_on: restart` | BungeeCord-Deployment, Backends über Service-DNS |
