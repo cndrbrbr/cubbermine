@@ -1,6 +1,6 @@
 # Cubbermine – Beschreibung des Altsystems
 
-**Stand:** 16.11.2026, erhoben direkt auf den drei Hosts; aktualisiert am selben Abend nach den ersten Sofortmaßnahmen ([planning.md](planning.md), Abschnitt S) (laufende Container, Compose-Projekte, Volumes, Timer, offene Ports). Dieses Dokument beschreibt das **heute produktiv laufende System auf Docker-Compose-Basis**, das durch Cubbermine abgelöst werden soll. Zielarchitektur: [architecture.md](architecture.md); Analyse der Minecraft-Images: [dockerminecraft.md](dockerminecraft.md); Websites und Dienste: [websites-monitoring.md](websites-monitoring.md).
+**Stand:** 17.11.2026, erhoben direkt auf den drei Hosts (laufende Container, Compose-Projekte, Volumes, Timer, offene Ports); enthält die Sofortmaßnahmen vom 16.11.2026 ([planning.md](planning.md), Abschnitt S) und die neue Offsite-Kopie der Backups ([backups.md](backups.md)). Dieses Dokument beschreibt das **heute produktiv laufende System auf Docker-Compose-Basis**, das durch Cubbermine abgelöst werden soll. Zielarchitektur: [architecture.md](architecture.md); Analyse der Minecraft-Images: [dockerminecraft.md](dockerminecraft.md); Websites und Dienste: [websites-monitoring.md](websites-monitoring.md).
 
 ---
 
@@ -16,6 +16,17 @@ Drei einzeln betriebene virtuelle Server beim selben Provider (netcup; erkennbar
 
 Netzqualität zwischen den Hosts (gemessen 14.–16.11.2026, [PreNetzwerkmessung.md](PreNetzwerkmessung.md)): ein Router dazwischen, RTT rund 0,5 ms, 1 Gbit/s je Host, Pfad-MTU 1500.
 
+**Externe Dienste**, von denen das System abhängt:
+
+| Dienst | Wofür |
+|---|---|
+| Hetzner Storage Box BX21 (Helsinki) | verschlüsselte Offsite-Kopie des Backup-Tresors (restic), seit 16.11.2026; Details in [backups.md](backups.md) |
+| Let's Encrypt | TLS-Zertifikate der drei Caddy-Instanzen |
+| Discord (Webhook) | Alarme aus Grafana, SSH-Login-Meldungen |
+| SMTP des Providers | Login-Codes und Einladungen der Adminpanels |
+| GitHub | Repositories aller Komponenten; Images werden heute noch auf den Hosts gebaut |
+| DNS | Wildcard-Einträge `*.meckminecraft.de` → MeckMinecraft, `*.cndrbrbr.de` → NC3 |
+
 ### 1.1 Gesamtarchitektur
 
 ```mermaid
@@ -26,25 +37,26 @@ flowchart TB
     discord["Discord"]
 
     subgraph meck["MeckMinecraft · 185.170.113.136 · 8 vCPU · 16 GB"]
-        mcaddy["Caddy :80/:443<br/>meckminecraft.de · admin. · karte-inigresso."]
+        mcaddy["Caddy :80/:443<br/>meckminecraft.de · admin. · grafana. · karte-inigresso."]
         mhome["Homepage + Statusseite<br/>statisch, von Caddy ausgeliefert"]
         bungee["BungeeCord :25565"]
         lobby["Lobby"]
         mmc["mc1–mc5<br/>Spigot · SSH :2221–2225"]
         madmin["Adminpanel"]
-        prom["Prometheus :9090"]
-        graf["Grafana :3000"]
+        prom["Prometheus v3.11.0<br/>nur lokal"]
+        graf["Grafana 12.4.2<br/>nur lokal"]
     end
 
     subgraph nc3["NC3 · 2.56.99.112 · 10 vCPU · 24 GB · 1,5 TB"]
         ncaddy["omasys-caddy :80/:443<br/>cndrbrbr.de · ai. · admin. · kookie. · karte."]
         nmc["mc1–mc5 Standalone<br/>:25565–25569 · SSH :2221–2225<br/>mc1 = Forge"]
         nadmin["Adminpanel"]
-        omasys["Omasys :3000"]
-        nq["NonameQuiz<br/>Web · KI-Proxy · Ollama"]
+        omasys["Omasys<br/>nur lokal"]
+        nq["NonameQuiz<br/>Web · KI-Proxy · Ollama 0.35.0"]
         kookie["Kookie"]
         vault[("mineback-Tresor<br/>/var/lib/mineback · 831 GB")]
         bhttp["nginx :8088<br/>Backups für restore"]
+        offsite["restic<br/>mineback-offsite 03:30"]
     end
 
     subgraph cf["Codefield · 89.58.11.96 · 4 vCPU · 10 GB"]
@@ -52,6 +64,10 @@ flowchart TB
         cspigot["Workshop-Spigot :25565<br/>jsmn-Upload · BlueMap"]
         chome["Homepage · IDE"]
         o2c["orbita2core<br/>gestoppt"]
+    end
+
+    subgraph hz["Hetzner · Helsinki"]
+        box[("Storage Box BX21<br/>restic-mineback · verschlüsselt")]
     end
 
     players --> bungee --> lobby
@@ -64,6 +80,7 @@ flowchart TB
     mcaddy --> mhome
     mcaddy --> madmin
     mcaddy -->|"/api/prometheus"| prom
+    mcaddy --> graf
     ncaddy --> nadmin
     ncaddy --> omasys
     ncaddy --> nq
@@ -83,6 +100,8 @@ flowchart TB
     cf -.->|"mineback 02:15 · SSH"| vault
     nmc -.->|"mineback lokal"| vault
     vault --> bhttp
+    vault --> offsite
+    offsite -->|"SSH · nur anhängen"| box
 ```
 
 ---
@@ -104,6 +123,8 @@ Gemeinsam auf allen drei Hosts: Debian GNU/Linux 13 (trixie), Kernel 6.12.113, D
 | `minecraftdash` (`/root/mcDashProject/minecraftDash`) | `caddy` | `caddy:2-alpine` | 80, 443 |
 | | `prometheus` | `prom/prometheus:v3.11.0` | 9090 nur lokal (`127.0.0.1`); öffentlich nur `/api/prometheus/` über Caddy |
 | | `grafana` | `grafana/grafana:12.4.2` | 3000 nur lokal; öffentlich über Caddy `https://grafana.meckminecraft.de` |
+
+**Konfiguration außerhalb von Git:** `minecraftDash/secrets/node-exporter-password` (node_exporter-Passwort für Prometheus), `grafana/provisioning/alerting/contactpoints.yaml` (Discord-Webhook, `skip-worktree`).
 
 **Volumes (Größe):** `lobby_data` 1,1 GB, `mc1_data` 620 MB, `mc2_data` 560 MB, `mc3_data` 460 MB, `mc4_data` 400 MB, `mc5_data` 2,0 GB, `bungee_data` 50 MB, `adminpanel_data` 0,7 MB, `grafana-data` 51 MB, Caddy-Zertifikate. `prometheus-data` 1,1 GB (benannt seit 16.11.2026). Dazu rund 20 anonyme Volumes (Reste früherer Container, u. a. das frühere anonyme Prometheus-Volume mit 1,1 GB, dessen Daten ins benannte Volume kopiert wurden).
 
@@ -138,10 +159,13 @@ Alle Webdienste hängen am Netz `omasys_default`, damit `omasys-caddy` sie errei
 | mineback-Tresor `/var/lib/mineback` (831 GB) | nimmt die verschlüsselten Backups **aller drei Hosts** an (Benutzer `mc-backup` per SSH) |
 | nginx auf Port **8088** | liefert `/var/lib/mineback/public` aus; daraus holt der `restore`-Befehl der Minecraft-Container seine Backups (`BACKUP_URL`) |
 | `mineback-freshness.timer` | schreibt Alter des letzten Backups als Metrik für node_exporter (Textfile-Collector) |
+| `mineback-offsite.timer` (täglich 03:30) und `/usr/local/sbin/mineback-offsite` | verschlüsselte Kopie von `store/` mit restic auf die Hetzner Storage Box; SSH-Schlüssel `/root/.ssh/storagebox_ed25519` darf dort nur anhängen; Zugangsdatei und Passwort in `/root/.config/restic/`; Metriken in `mineback_offsite.prom`. Erstlauf (~830 GB) seit 16.11.2026, 23:35 |
 | `kookie-import.timer` | vierteljährlicher Rezept-Import (1. Jan/Apr/Jul/Okt, 03:40) über `deploy/kookie-update.sh` |
 | Kookie-Daten `/var/lib/kookie` (12 MB), Kochbuch-PDF `/root/BienesKochbuch.pdf` | Daten für `kookie-web` |
 
-**Firewall:** `DOCKER-USER` → Kette `MC-METRICS`: Port 9940 nur von MeckMinecraft (`185.170.113.136`), sonst gesperrt.
+**Firewall:** `DOCKER-USER` → Kette `MC-METRICS`: Port 9940 nur von MeckMinecraft (`185.170.113.136`), sonst gesperrt; geladen von `mc-firewall.service` (`/root/hostMC/fw.sh`).
+
+**Konfiguration außerhalb von Git:** `/root/omasys/omasys/.env` (Domain, Port nur lokal, Zugangsdaten; seit 16.11.2026), `/root/nonamequiz-deploy/` (kein Repository, `proxy.env` mit Zugangstoken), `keys/`, `secrets/` und `.env` von minecraftHostingServer.
 
 ### 2.3 Codefield (`89.58.11.96`)
 
@@ -199,7 +223,8 @@ Mehrere Caddy-Blöcke wurden von Hand ergänzt und werden beim erneuten Ausführ
 ### 3.4 Monitoring und Benachrichtigung
 
 - **Prometheus** (MeckMinecraft, alle 15 s): Job `minecraft` mit statischer Zielliste (Codefield :9940, MeckMinecraft :9940–9945, NC3 :9941–9945; Labels `server_name`, `local_name`) und Job `node` (node_exporter :9100 der drei Hosts, Label `machine`). Die Minecraft-Metriken liefert das Plugin PrometheusExporter in jedem Server (bei Forge: Mod + `metrics-adapter.py`).
-- **Grafana** (MeckMinecraft): Dashboard `minecraft.json`, Alert-Regeln (Server, Backups) mit Discord-Webhook, alles als Provisioning-Dateien.
+- **Grafana** (MeckMinecraft, `https://grafana.meckminecraft.de`): Dashboard `minecraft.json`, Alert-Regeln (Server, Backups) mit Discord-Webhook, alles als Provisioning-Dateien.
+- Prometheus und Grafana sind seit 16.11.2026 nur noch lokal bzw. über Caddy erreichbar; das node_exporter-Passwort liest Prometheus aus einer Datei außerhalb von Git.
 - **Öffentliche Statusseite** `meckminecraft.de/server.html` fragt Prometheus direkt aus dem Browser ab; Karten-Titel (MOTD) aus `homepage/servers.json`, stündlich aktualisiert.
 - **SSH-Logins** auf allen Hosts werden an Discord gemeldet.
 
@@ -210,7 +235,8 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 - **Agent** auf jedem Host (`mineback-agent.timer`, täglich 02:15): sichert die Minecraft-Server (MeckMinecraft mc1–mc5, Lobby und Proxy; NC3 mc1–mc5; Codefield den Workshop-Server), verschlüsselt mit `age` und überträgt per SSH an den Tresor.
 - **Tresor** auf NC3 (`/var/lib/mineback`, 831 GB): `store/<host>/servers|fleets`, Katalog `catalog.sqlite`, öffentlich lesbare Sicht `public/` über nginx :8088 für den `restore`-Befehl der Container.
 - **Aufbewahrung** laut `mineback.toml`: `keep_last = 1`, keine täglichen/wöchentlichen/monatlichen Stände; dauerhaft behalten werden Backups mit den Gründen `pre-restore`, `pre-version`, `workshop-final`.
-- **Überwachung:** `mineback-freshness` (NC3) liefert das Alter des letzten Backups an Prometheus; Grafana alarmiert per Discord.
+- **Offsite-Kopie** (seit 16.11.2026): `mineback-offsite` auf NC3 sichert `store/` täglich um 03:30 mit restic auf die Hetzner Storage Box in Helsinki. Verschlüsselt beim Absender, 25 MB/s, niedrige Priorität; der Zugang von NC3 darf nur anhängen (getestet: Löschen → `403 Forbidden`). Der Erstlauf mit rund 830 GB läuft; danach nur noch Änderungen. Konzept und Anleitung: [backups.md](backups.md).
+- **Überwachung:** `mineback-freshness` (NC3) liefert das Alter des letzten Backups an Prometheus; Grafana alarmiert per Discord. Für die Offsite-Kopie schreibt `mineback-offsite` eigene Metriken (`mineback_offsite_*`); der Alarm dafür folgt nach dem Erstlauf.
 - Zusätzlich das ältere `backup.sh` von minecraftHostingServer (ZIP von `cfg`/`plugins`/`worlds`) und manuelle Sicherungen in `/root/hostMC/backup*`.
 
 ### 3.6 Weitere Dienste (NC3, Codefield)
@@ -235,7 +261,7 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 | 8088/tcp | – | nginx (Backups für `restore`) | – |
 | 9090/tcp | nur lokal (Prometheus, seit 16.11.2026) | – | – |
 | 9100/tcp | node_exporter (Basic Auth) | node_exporter (Basic Auth) | node_exporter (Basic Auth) |
-| 9940–9945/tcp | Metriken (9940 von außen gesperrt) | Metriken (nur von MeckMinecraft) | Metriken 9940 (offen) |
+| 9940–9945/tcp | Metriken (9940 von außen gesperrt) | Metriken (nur von MeckMinecraft) | Metriken 9940 (noch offen; Regel vorbereitet) |
 | 24454/udp | – | Voice-Chat mc1 (Forge) | – |
 | 25565/tcp | BungeeCord | mc1 | Workshop-Server |
 | 25566–25569/tcp | – | mc2–mc5 | – |
@@ -248,14 +274,14 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 | Repository | Host / Pfad | Besonderheiten |
 |---|---|---|
 | minecraftHostingServer | MeckMinecraft `/root/minecraftHostingServer` (`main`), NC3 `/root/hostMC/minecraftHostingServer` (`local-nc3`) | erzeugte `docker-compose.yml` lokal geändert; Override-Datei, `.env`, `keys/`, `secrets/` nur auf dem Host |
-| minecraftDash | MeckMinecraft `/root/mcDashProject/minecraftDash` | viele nicht eingecheckte lokale Änderungen (Homepage, Caddyfile, Prometheus-Ziele, Alert-Regeln) |
+| minecraftDash (öffentlich) | MeckMinecraft `/root/mcDashProject/minecraftDash` | seit 16.11.2026 eingecheckt (Commit `d7dc594`); `secrets/` und `*.bak-*` per `.gitignore` ausgeschlossen; Push nur über NC3 (dort liegt der GitHub-Schlüssel) |
 | javascriptMinecraftWorkshopServer | Codefield `/root/javascriptMinecraftWorkshopServer` | Start mit Proxy-Override, keine `.env` |
 | caddy-proxy | Codefield `/root/caddy-proxy` | |
 | testo2c (orbita2core) | Codefield `/root/testo2c` | |
-| omasys | NC3 `/root/omasys/omasys` | Caddyfile mit von Hand ergänzten Blöcken für alle NC3-Domains |
-| nonamequiz (+ Deploy-Ordner) | NC3 `/root/nonamequiz`, `/root/nonamequiz-deploy` | Live-Checkout wird direkt ausgeliefert |
+| omasys | NC3 `/root/omasys/omasys` | Caddyfile mit von Hand ergänzten Blöcken für alle NC3-Domains; `.env` nur auf dem Host |
+| nonamequiz (+ Deploy-Ordner) | NC3 `/root/nonamequiz`, `/root/nonamequiz-deploy` | Live-Checkout wird direkt ausgeliefert (lokale Änderung `ai-service.js` mit Token, nie einchecken); Deploy-Ordner ist kein Repository |
 | kookie | NC3 `/root/kookie` | privates Repository |
-| mineback | NC3 `/root/mineback`; Konfiguration `/etc/mineback/` auf allen Hosts | |
+| mineback | NC3 `/root/mineback`; Konfiguration `/etc/mineback/` auf allen Hosts | Offsite-Skript `mineback-offsite` liegt bisher nur auf NC3 (später als mineback-Feature T9) |
 
 ---
 
@@ -263,11 +289,11 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 
 | Bereich | Befund |
 |---|---|
-| Sicherheit | ~~Prometheus (:9090), Grafana (:3000) und Omasys (:3000) direkt per HTTP öffentlich~~ – behoben 16.11.2026; `/api/prometheus/` ist vollständig offen; keine Host-Firewall; Metrik-Port 9940 auf Codefield offen |
-| Backups | Der Tresor aller drei Hosts liegt auf NC3 selbst: Fällt NC3 aus, sind die Backups von NC3 **und** der Zugriff auf alle anderen Backups betroffen; es gibt keine Kopie an einem anderen Ort. Aufbewahrung nur des letzten Stands (`keep_last = 1`) plus markierte Sonderstände. Eine Offsite-Kopie ist geplant ([planning.md](planning.md), Abschnitt S) |
+| Sicherheit | ~~Prometheus (:9090), Grafana (:3000) und Omasys (:3000) direkt per HTTP öffentlich~~ – behoben 16.11.2026; offen: `/api/prometheus/` vollständig offen, keine Host-Firewall, Metrik-Port 9940 auf Codefield offen (Regel vorbereitet), Passwort des Storage-Box-Hauptkontos muss geändert werden |
+| Backups | Der Tresor aller drei Hosts liegt auf NC3. **Offsite-Kopie seit 16.11.2026 eingerichtet** (restic auf Hetzner Storage Box, nur anhängen); bis der Erstlauf abgeschlossen ist, gibt es noch keine vollständige Kopie an einem anderen Ort. Im Tresor nur der letzte Stand (`keep_last = 1`) plus markierte Sonderstände. Offen: Alarm für die Offsite-Kopie, Admin-Zugang zum Aufräumen, Box-Snapshots, Restore-Test ([backups.md](backups.md)) |
 | Speicher | NC3-Platte zu 77 % belegt; rund 86 GB in ungenutzten alten Volumes und 39 GB in manuellen Backup-Ordnern |
 | Daten | ~~Prometheus nur mit anonymem Volume; Images ohne feste Version~~ – behoben 16.11.2026 (benanntes Volume; Prometheus v3.11.0, Grafana 12.4.2, Ollama 0.35.0) |
-| Nachvollziehbarkeit | lokale, nicht eingecheckte Änderungen (generierte Compose-Dateien, Caddyfiles; minecraftDash am 16.11.2026 eingecheckt); von Hand ergänzte Konfigurationsblöcke, die bei `setup.sh` verloren gehen |
+| Nachvollziehbarkeit | lokale, nicht eingecheckte Änderungen (generierte Compose-Dateien, Caddyfiles; minecraftDash am 16.11.2026 eingecheckt); von Hand ergänzte Konfigurationsblöcke, die bei `setup.sh` verloren gehen; mehrere Einstellungen nur in Dateien auf den Hosts. `.env` und `keys/` von minecraftHostingServer sichert mineback verschlüsselt mit (`hostconf-secrets.age`); **nicht** gesichert sind Omasys-`.env`, `nonamequiz-deploy/proxy.env`, `minecraftDash/secrets/` und das restic-Passwort (letzteres muss offline liegen) |
 | Betrieb | Spigot-Build zur Laufzeit (lange Erststarts); BungeeCord löst Backend-Adressen nur beim Start auf (nach Neuanlage der Server `bungee` neu starten); kein gemeinsames Netz, jede Querverbindung über öffentliche IPs; Verwaltung je Host getrennt (zwei Adminpanels, drei Caddy-Konfigurationen) |
 | Verfügbarkeit | jeder Dienst hängt an genau einem Host; bei Ausfall eines Hosts sind dessen Server und Websites weg, bei NC3 zusätzlich der Backup-Tresor |
 
