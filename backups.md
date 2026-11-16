@@ -21,7 +21,7 @@
 | Stufe | Was | Wo | Werkzeug | Häufigkeit | Aufbewahrung |
 |---|---|---|---|---|---|
 | 1 | Minecraft-Server aller drei Hosts (Welten, Plugins, Konfiguration, Spielerlisten, Geheimnisse mit `age` verschlüsselt) | mineback-Tresor auf NC3 (`/var/lib/mineback`) | mineback-Agent je Host, SSH-Push | täglich 02:15 | letzter Stand + markierte Sonderstände (`pre-restore`, `pre-version`, `workshop-final`) |
-| 2 | Inhalt des Tresors (`store/`) | Hetzner Storage Box BX21, Helsinki, Verzeichnis `restic-mineback` | restic über `rclone serve restic --append-only` | täglich 03:30 | Vorschlag: 14 täglich, 8 wöchentlich, 12 monatlich (Aufräumen mit getrenntem Zugang) |
+| 2 | Inhalt des Tresors (`store/`) und Zugangsdateien außerhalb des Tresors (siehe 2.5) | Hetzner Storage Box BX21, Helsinki, Verzeichnis `restic-mineback` | restic über `rclone serve restic --append-only` | täglich 03:30 | Vorschlag: 14 täglich, 8 wöchentlich, 12 monatlich (Aufräumen mit getrenntem Zugang) |
 | 3 | Ganze Storage Box | auf der Box selbst | automatische Box-Snapshots von Hetzner | täglich (geplant) | bis zu 20 Snapshots |
 | – | Windows-Rechner (eigene Dateien) | Storage Box, eigenes Unterkonto, Verzeichnis `kopia` | Kopia (KopiaUI) über SFTP | stündlich | Kopia-Richtlinie, siehe 3.5 |
 
@@ -86,6 +86,7 @@ flowchart LR
 | `mineback_last_backup_timestamp_seconds{host,server}` | `mineback-freshness` auf NC3 | besteht bereits (Grafana → Discord) |
 | `mineback_offsite_last_success_timestamp_seconds` | `/usr/local/sbin/mineback-offsite` auf NC3 | geplant: älter als 36 h |
 | `mineback_offsite_last_run_exit_code` | ebenda | geplant: ungleich 0 |
+| `mineback_offsite_extra_collect_ok` | ebenda | geplant: 0 |
 | Windows-Rechner | KopiaUI zeigt das Alter des letzten Snapshots | Sichtkontrolle; optional Kopia-Benachrichtigung per E-Mail |
 
 ### 1.6 Wiederherstellung (Übersicht)
@@ -178,9 +179,10 @@ r forget <id>                            # muss mit "403 Forbidden" scheitern (n
 set -u
 . /root/.config/restic/mineback-offsite.env
 LIMIT_KIB=${OFFSITE_LIMIT_KIB:-25600}   # 25 MB/s
+/usr/local/sbin/mineback-offsite-collect; collect_rc=$?   # Zugangsdateien einsammeln
 restic -o rclone.program="$RESTIC_RCLONE_PROGRAM" -o rclone.args="$RESTIC_RCLONE_ARGS" \
     backup --tag mineback --host nc3 --limit-upload "$LIMIT_KIB" --one-file-system \
-    /var/lib/mineback/store /etc/mineback/mineback.toml &
+    /var/lib/mineback/store /etc/mineback/mineback.toml /var/lib/mineback-offsite-extra &
 pid=$!
 trap 'kill -INT "$pid" 2>/dev/null' INT TERM   # Abbruch nur an restic weitergeben
 while :; do wait "$pid"; rc=$?; kill -0 "$pid" 2>/dev/null || break; done
@@ -188,7 +190,18 @@ while :; do wait "$pid"; rc=$?; kill -0 "$pid" 2>/dev/null || break; done
 exit $rc
 ```
 
-Das vollständige Skript (mit Metriken) liegt auf NC3. Wichtig sind diese Punkte:
+Das vollständige Skript (mit Metriken) liegt auf NC3.
+
+**Zugangsdateien außerhalb des Tresors.** mineback sichert die Server und von minecraftHostingServer auch `.env` und `keys/`. Andere Dienste haben ihre Zugangsdaten in Dateien, die mineback nicht kennt. Diese sammelt `/usr/local/sbin/mineback-offsite-collect` vor jedem Lauf nach `/var/lib/mineback-offsite-extra/<host>/` (Rechte nur root), restic sichert das Verzeichnis verschlüsselt mit:
+
+| Host | Datei |
+|---|---|
+| NC3 | `/root/omasys/omasys/.env`; `/root/nonamequiz-deploy/` (`proxy.env`, `docker-compose.yml`, `nginx.conf`, `Dockerfile.proxy`); `mineback-offsite`-Skript, -Service, -Timer; `/root/.config/restic/mineback-offsite.env` (ohne Passwort) |
+| MeckMinecraft (per SSH geholt) | `minecraftDash/secrets/node-exporter-password`; `minecraftDash/grafana/provisioning/alerting/contactpoints.yaml` (Discord-Webhook) |
+
+Fehlt eine Datei, läuft das Backup trotzdem; die Metrik `mineback_offsite_extra_collect_ok` steht dann auf 0. Das restic-Passwort wird bewusst **nicht** gesammelt — es gehört offline.
+
+Wichtig sind außerdem diese Punkte:
 
 - restic läuft im Hintergrund, und das Skript gibt ein Abbruchsignal **nur an restic** weiter. Sonst beendet systemd gleichzeitig die SSH-Verbindung, und restic kann seinen Stand nicht mehr festhalten.
 - Die Metriken werden in eine temporäre Datei geschrieben und dann umbenannt, damit node_exporter nie eine halbe Datei liest.
