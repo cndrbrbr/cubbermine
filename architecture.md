@@ -4,15 +4,17 @@
 
 ## Ziel
 
-Cubbermine ist eine geplante Kubernetes-basierte Minecraft-Hosting-Plattform. Eine zentrale Verwaltungs-API bzw. ein Adminpanel soll Minecraft-Server erstellen, konfigurieren, starten, stoppen, überwachen und löschen können. Die vorhandenen Docker-Compose-Workloads werden schrittweise migriert.
+Cubbermine ist eine geplante Kubernetes-basierte Minecraft-Hosting-Plattform. Eine zentrale Verwaltungs-API mit Weboberfläche (Weiterentwicklung des bestehenden Adminpanels) soll Minecraft-Server erstellen, konfigurieren, starten, stoppen, überwachen und löschen können. Die vorhandenen Docker-Compose-Workloads werden schrittweise migriert.
 
 ## Bestandsinfrastruktur
 
 | Host | Öffentliche IPv4 | Aktuelle Container (Auszug) |
 | --- | --- | --- |
-| MeckMinecraft | `185.170.113.136` | BungeeCord, Lobby, mc1–mc5, Caddy, Grafana, Prometheus |
-| NC3 | `2.56.99.112` | mc1–mc5, Caddy, Omasys, NonameQuiz |
+| MeckMinecraft | `185.170.113.136` | BungeeCord, Lobby, mc1–mc5, Adminpanel, Caddy, Grafana, Prometheus |
+| NC3 | `2.56.99.112` | mc1–mc5, Adminpanel, Caddy (Omasys), Omasys, NonameQuiz, Kookie |
 | Codefield | `89.58.11.96` | Spigot/ScriptCraft, Workshop-Webseiten, Caddy |
+
+**Bestehende Verwaltung:** Auf MeckMinecraft und NC3 läuft je ein **Adminpanel** (Weboberfläche, `admin.meckminecraft.de` bzw. `admin.cndrbrbr.de`) aus dem Projekt minecraftHostingServer. Schüler und Lehrkräfte melden sich per E-Mail-Code an und verwalten dort ihre Server: Start/Stopp, Plugins, Spieler, Einstellungen, Backups. Das Adminpanel hat keinen Docker-Socket; es steuert die Server über SSH mit den Schlüsseln des jeweiligen Servers und über RCON, hat also nicht mehr Rechte als ein Schüler auf seinem eigenen Server. PuTTY wird für die Verwaltung nicht mehr genutzt. Für den direkten Dateizugriff nutzen Schüler weiterhin **FileZilla** (SFTP, je Server ein eigener Port, chroot auf den eigenen Server). Codefield hat kein Adminpanel. Details: [dockerminecraft.md](dockerminecraft.md), Abschnitt 1.3.
 
 Die Docker-Bridge-Netzwerke sind **hostlokal**; ein gemeinsames Cluster-Netz oder bestehende private Verbindungen sind aus den Inventaren **nicht nachgewiesen**.
 
@@ -79,12 +81,13 @@ flowchart TB
 flowchart TB
     client["Minecraft-Clients"] --> tcp["Minecraft TCP-Einstieg :25565"]
     user["Admin / Nutzer"] --> https["HTTPS / Login"]
+    ftp["Schüler · FileZilla"] --> sftp["SFTP je Server"]
 
     subgraph cluster["Ein gemeinsamer K3s-Cluster – Zielarchitektur"]
       direction TB
       cp["Dedizierte K3s Control Plane<br/>neuer vierter Server · Phase 1"]
       ingress["HTTP Ingress / Gateway"]
-      app["Cubbermine Web-UI + API<br/>(geplant)"]
+      app["Cubbermine Web-UI + API<br/>(Weiterentwicklung Adminpanel)"]
       proxy["Minecraft-Proxy<br/>BungeeCord oder Velocity"]
       svc["Interne Minecraft-Services"]
       ctrl["Provisioning Controller<br/>(geplant)"]
@@ -109,6 +112,7 @@ flowchart TB
 
     tcp --> proxy
     https --> ingress
+    sftp --> pods
 ```
 
 **Hinweis zur Darstellung:** Die Nodes sind die verfügbaren Ausführungsorte; Minecraft-Pods sind bewusst *nicht dauerhaft* einem bestimmten Host zugeordnet. Ob ein Pod tatsächlich verschiebbar ist, hängt vor allem von Speicher, Node-Affinity und Netzwerkkonfiguration ab.
@@ -137,7 +141,8 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 - **Cubbermine API/Controller (geplant):** kontrollierte Bereitstellung der Ressourcen; Authentifizierung, Autorisierung, Quotas, Status und Audit.
 - **Minecraft-Server:** je Instanz vorzugsweise ein `StatefulSet` mit `replicas: 1`, internem `Service`, ressourcenbegrenztem Container und eigenem `PersistentVolumeClaim`. **Keine** gleichzeitigen Schreibzugriffe mehrerer Pods auf dieselbe Welt.
 - **Minecraft-Proxy:** zentraler öffentlich erreichbarer TCP-Einstieg; Backends nur intern. BungeeCord kann übernommen oder Velocity später geprüft werden.
-- **Web-UI:** Deployment und HTTP Ingress/Gateway; Ingress ersetzt **nicht** automatisch einen Minecraft-TCP-Proxy.
+- **Web-UI:** Weiterentwicklung des bestehenden Adminpanels (heute auf MeckMinecraft und NC3), künftig über die Cubbermine API statt über SSH je Server; Deployment und HTTP Ingress/Gateway. Ingress ersetzt **nicht** automatisch einen Minecraft-TCP-Proxy. Einen SSH-Befehlszugang für Nutzer (früher PuTTY) gibt es nicht mehr.
+- **Dateizugang:** SFTP für FileZilla als Sidecar im Minecraft-Pod, eigener TCP-Service je Server, bisherige Ports und Schlüssel bleiben (siehe [dockerminecraft.md](dockerminecraft.md)).
 - **Storage:** PVC/StorageClass, getestete Backups und Restore. Lokaler Speicher bindet den Pod üblicherweise an einen Node; echtes Failover braucht geeignete Storage- und Datenstrategie.
 - **Betrieb:** Monitoring (Prometheus/Grafana), Probes, Logs, Alerts, Kubernetes Events.
 
@@ -148,6 +153,7 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 | Minecraft-Serverinstanz | StatefulSet (1 Pod), Service, PVC |
 | Proxy | Deployment/StatefulSet, TCP Service |
 | Web-UI/API | Deployment, Service, Ingress |
+| SFTP-Zugang | Sidecar-Container im Minecraft-Pod, TCP Service, Secret (authorized_keys) |
 | Konfiguration | ConfigMap, Secret |
 | Projekt/Mandant | Namespace, RBAC, ResourceQuota, NetworkPolicy |
 | Speicher | PersistentVolumeClaim + StorageClass |
@@ -164,7 +170,7 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 
 ## Sicherheit
 
-Kubernetes-API nur über VPN/administrativen Zugang. RBAC mit minimalen Rechten, TLS, restriktive Pod-Sicherheit, Netzwerksegmentierung/NetworkPolicies (CNI-Unterstützung prüfen), keine Secrets im Git, sichere Proxy-Weiterleitung, Rate-Limits und Audit-Logging. Öffentlich freigeben nur benötigte Ports; Minecraft-Backends nicht direkt exponieren.
+Kubernetes-API nur über VPN/administrativen Zugang. RBAC mit minimalen Rechten, TLS, restriktive Pod-Sicherheit, Netzwerksegmentierung/NetworkPolicies (CNI-Unterstützung prüfen), keine Secrets im Git, sichere Proxy-Weiterleitung, Rate-Limits und Audit-Logging. Öffentlich freigeben nur benötigte Ports; Minecraft-Backends nicht direkt exponieren. Grundsatz aus dem bestehenden Adminpanel beibehalten: Die Weboberfläche bzw. API erhält nur die Rechte, die sie für die eigenen Minecraft-Ressourcen braucht; Nutzer bekommen keinen Shell- oder SSH-Befehlszugang, nur Weboberfläche und chroot-SFTP.
 
 ## Offene Architekturentscheidungen / Risiken
 
