@@ -4,27 +4,31 @@
 
 Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hosting-Infrastruktur von **Docker Compose** zu einem **gemeinsamen Kubernetes-/K3s-Cluster**. Ziel ist eine zentral verwaltete Plattform, über die Minecraft-Server bereitgestellt und betrieben werden können.
 
-> **Projektstatus:** Architektur- und Planungsphase. Die bestehende Infrastruktur läuft weiterhin mit Docker Compose; die Kubernetes-Migration ist geplant.
+> **Projektstatus (16.11.2026):** Architektur- und Planungsphase, Meilenstein M0 (Bestandsaufnahme und Architekturentscheidungen) weitgehend abgeschlossen. Die Netzwerkmessung zwischen den drei Hosts ist ausgewertet (Empfehlung: **geeignet**), das Konzept für die Minecraft-Container steht. Es ist noch kein Cluster installiert; die bestehende Infrastruktur läuft unverändert mit Docker Compose.
 
 ## Bisherige Aktivitäten
 
-- Die bestehende Docker-Compose-Infrastruktur auf drei Hosts wurde inventarisiert: **MeckMinecraft** (`185.170.113.136`), **NC3** (`2.56.99.112`) und **Codefield** (`89.58.11.96`).
-- Eine **K3s-Zielarchitektur** wurde entwickelt: ein zusätzlicher dedizierter Control-Plane-Server und die drei bestehenden Hosts als Worker-Nodes.
-- Ein möglicher späterer Ausbau auf **drei Control Planes** für höhere Verfügbarkeit wurde beschrieben.
-- Anforderungen, Funktionsumfang und Migrationsschritte wurden dokumentiert.
-- Für die Kommunikation zwischen den Hosts wurde ein **Netzwerkmessauftrag** mit Latenz-, Paketverlust-, Routing- und Durchsatzmessungen erstellt.
-- Im Verzeichnis [`messdaten/`](messdaten/) liegen bereits Messskripte und Messdaten zur Vorbereitung der Netzwerkanalyse. Eine abschließende Eignungsbewertung ist damit noch nicht dokumentiert.
+- **Bestandsaufnahme:** Die Docker-Compose-Infrastruktur auf den drei Hosts **MeckMinecraft** (`185.170.113.136`), **NC3** (`2.56.99.112`) und **Codefield** (`89.58.11.96`) wurde inventarisiert.
+- **Zielarchitektur:** Gewählt ist Variante B, ein gemeinsamer K3s-Cluster mit einem zusätzlichen dedizierten Control-Plane-Server und den drei bestehenden Hosts als Worker. Ein späterer Ausbau auf drei Control Planes ist als Option beschrieben ([architecture.md](architecture.md)).
+- **Funktionsumfang und Planung:** Features mit Prioritäten, Meilensteine M0–M5 mit Gates, Backlog und Risiken sind dokumentiert ([features.md](features.md), [planning.md](planning.md)).
+- **Netzwerkmessung Phase A** (14.–17.11.2026, [PreNetzwerkmessung.md](PreNetzwerkmessung.md), Abschnitt 9):
+  - Latenz im Mittel rund **0,5 ms**, Jitter rund 0,1 ms, Pfad-MTU 1500, nur ein Router zwischen den Hosts (selber Provider, sehr wahrscheinlich dasselbe Rechenzentrum).
+  - Durchsatz in allen sechs Richtungen rund **1 Gbit/s**; auf der Strecke Codefield → NC3 bei Volllast etwa 8 % Retransmits (vermutlich Policer beim Provider), kein Ausschlusskriterium.
+  - Langzeitmessung (Zwischenauswertung nach 46,5 h): kein Tag-/Nachtunterschied, einziger Paketverlust durch eine kurze providerseitige Unterbrechung am 16.11.2026 um 05:17 Uhr.
+  - **Ergebnis: A – Geeignet**, für eine einzelne Control Plane wie auch für einen späteren etcd-HA-Verbund. Abschlussprüfung nach Messende am 17.11.2026, 22:05 Uhr.
+- **Container-Konzept:** Die bestehenden Minecraft-Images (minecraftHostingServer, theDocks/mcserverdockB) wurden analysiert. Daraus ist das Konzept für Image und Pod in Cubbermine entstanden: ein unveränderliches Image pro Minecraft-Version aus der CI, Java als Hauptprozess, Start/Stopp über `replicas 1/0`, SFTP-Sidecar für Schüler, Verwaltung über RCON, unverändertes Datenlayout für die Migration ([dockerminecraft.md](dockerminecraft.md)).
+- **Archiv eingeplant:** In M2 sind ein Archiv für alle produktiv genutzten Minecraft-Images und ein Archiv für Welt-Backups außerhalb der Worker-Nodes vorgesehen, jeweils mit Restore-Test.
 
 ## Anstehende Arbeiten
 
-1. **Netzwerkmessungen auswerten:** Verbindungen zwischen den drei bestehenden Hosts hinsichtlich RTT, Jitter, Paketverlust und Durchsatz beurteilen.
-2. **Cluster-Netzwerk planen:** WireGuard/VPN, Routing, DNS, Firewall und MTU festlegen und testen.
-3. **Control Plane bereitstellen:** Zusätzlichen Server auswählen, dimensionieren und K3s installieren; Backup und Wiederherstellung testen.
-4. **Drei Worker einbinden:** MeckMinecraft, NC3 und Codefield in denselben K3s-Cluster aufnehmen.
-5. **Minecraft-Prototyp umsetzen:** Einen Testserver mit StatefulSet, persistentem Speicher, internem Service und Minecraft-Proxy betreiben.
-6. **Cubbermine-Verwaltung entwickeln:** API/Adminpanel für Erstellen, Starten, Stoppen, Überwachen und Verwalten von Minecraft-Instanzen.
-7. **Schrittweise migrieren:** Bestehende Server, Welten, Plugins und Konfigurationen mit Backup- und Rollback-Konzept übertragen.
-8. **Optional HA ausbauen:** Später zwei weitere Control-Plane-Server ergänzen, sofern Bedarf und Netzwerkqualität dies zulassen.
+1. **Netzwerkmessung abschließen:** Langzeitmessung nach Ende am 17.11.2026 abschließend prüfen (Wiederholung der Unterbrechung?) und die Bewertung in [PreNetzwerkmessung.md](PreNetzwerkmessung.md) festschreiben.
+2. **Offene Entscheidungen treffen:** Control-Plane-Server (Empfehlung: selber Provider/Standort), Speicherstrategie, Container-Registry und Archivspeicher, Minecraft-Proxy (BungeeCord oder Velocity), siehe [dockerminecraft.md](dockerminecraft.md), Abschnitt 8.
+3. **Control Plane bereitstellen und Cluster-Netz aufbauen (M1):** Server anmieten, WireGuard mit MTU 1420, K3s installieren, Datastore-Backup testen, die drei Worker aufnehmen.
+4. **Minecraft-Prototyp (M2):** Spigot-Image per CI bauen und archivieren, Testserver als StatefulSet mit PVC, SFTP-Sidecar und Proxy betreiben, Welt-Backup ins Archiv und vollständigen Restore nachweisen.
+5. **Cubbermine-Verwaltung (M3):** API/Adminpanel für Erstellen, Starten, Stoppen, Überwachen und Verwalten der Server; Befehle des bisherigen Dispatchers als API-Endpunkte.
+6. **Schrittweise migrieren (M4):** Server einzeln mit Backup und Rückfallmöglichkeit umziehen, Proxy und Lobby zuletzt.
+7. **Härtung und Betrieb (M5):** Monitoring, Alerts, regelmäßige Restore- und Ausfalltests.
+8. **Optional HA ausbauen (M1b):** später zwei weitere Control-Plane-Server, sofern Bedarf besteht; die Netzwerkqualität lässt es zu.
 
 ## Dokumentation
 
@@ -32,9 +36,9 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 | --- | --- |
 | [architecture.md](architecture.md) | Aktuelle Infrastruktur und K3s-Zielarchitektur mit Mermaid-Diagrammen |
 | [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
-| [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung |
+| [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung, inkl. Image- und Backup-Archiv (M2) |
 | [dockerminecraft.md](dockerminecraft.md) | Analyse der bestehenden Minecraft-Docker-Images und Container-/Pod-Konzept für Cubbermine mit Architekturdiagramm |
-| [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag zur Prüfung der Verbindungen zwischen den Hosts |
+| [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag und Ergebnisse der Netzwerkmessung zwischen den Hosts (Abschnitt 9) |
 | [messdaten/](messdaten/) | Rohdaten der Netzwerkmessung |
 | [perfscripts/](perfscripts/) | Mess- und Auswerteskripte der Netzwerkmessung |
 
