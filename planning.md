@@ -124,7 +124,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - [ ] Minecraft-Router (z. B. mc-router) auf Port 25565: `meckminecraft.de` → BungeeCord/Lobby, `workshop.meckminecraft.de` → Workshop-Server, `nc3-mcN.meckminecraft.de` → bisherige NC3-Server.
 - [ ] **meckminecraft.de** umziehen: Homepage als Image, `/api/prometheus/` nur noch lesend, Grafana unter `grafana.meckminecraft.de`, BlueMaps unter `karte-*.meckminecraft.de`; danach Caddy auf MeckMinecraft stoppen und 80/443 an den Ingress übergeben.
 - [ ] **JavaScript-Workshop nach meckminecraft.de** umziehen: Workshop-Server als StatefulSet nach [dockerminecraft.md](dockerminecraft.md); Homepage `workshop.meckminecraft.de`, IDE `javascript.meckminecraft.de`, Upload `upload.meckminecraft.de` (jsmn, :25580), Karte `karte-workshop.meckminecraft.de`; Kurstexte und IDE auf feste codefield.de-Verweise prüfen; `codefield.de` leitet bis zum orbita2core-Umzug auf den Workshop weiter.
-- [ ] **cndrbrbr.de (NC3)** umziehen in den Namespace `cndrbrbr`: Omasys (Deployment + PVC + Secrets), NonameQuiz (Web als Image, KI-Proxy, Ollama fest auf NC3 mit 6 CPU / 8 GiB und Modell-PVC), Kookie (Web mit Basic Auth, Daten-PVC, vierteljährlicher Import als CronJob statt `kookie-import.timer`); Omasys- und Kookie-Daten in den Backup-Ablauf aufnehmen; danach `omasys-caddy` stoppen und 80/443 an den Ingress übergeben.
+- [ ] **cndrbrbr.de (NC3)** umziehen in den Namespace `cndrbrbr`: Omasys (Deployment + PVC + Secrets), NonameQuiz (Web als Image, KI-Proxy, Ollama fest auf NC3 mit Modell-PVC und **niedrigerer Priorität als Minecraft** (PriorityClass, kleine CPU-Requests, Limit 6 CPU, 8 GiB RAM; Entscheidung 16.11.2026)), Kookie (Web mit Basic Auth, Daten-PVC, vierteljährlicher Import als CronJob statt `kookie-import.timer`); Omasys- und Kookie-Daten in den Backup-Ablauf aufnehmen; danach `omasys-caddy` stoppen und 80/443 an den Ingress übergeben.
 - [ ] **orbita2core auf codefield.de** umziehen (nach dem Workshop): Orbital-Knoten als StatefulSets mit ihren Daten, Sim-Agenten, Adressen `node1–3`/`agent1–3.codefield.de` oder bisherige Zusatzports (Entscheidung); danach `caddy-proxy` auf Codefield stoppen.
 - [ ] Alte Compose-Stacks (minecraftDash, javascriptMinecraftWorkshopServer, caddy-proxy, omasys, nonamequiz-deploy, kookie, testo2c) bis zur Abnahme gestoppt aufbewahren, danach abbauen; Debian-node_exporter entfernen.
 
@@ -186,6 +186,6 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.
 - Kollisionen mit bestehenden öffentlichen Ports und Reverse Proxies.
 - Geänderte Minecraft-Adressen (Workshop, NC3-Server) lassen sich nicht weiterleiten; ohne rechtzeitige Ankündigung finden Schüler ihre Server nicht mehr.
-- Die CPU-Inferenz von Ollama auf NC3 kann die Minecraft-Server auf demselben Node ausbremsen, wenn die Ressourcen nicht fest begrenzt sind.
+- Die CPU-Inferenz von Ollama auf NC3 kann die Minecraft-Server auf demselben Node ausbremsen; Gegenmaßnahme: Ollama mit niedrigerer Priorität als Minecraft. Im Gegenzug antwortet NonameQuiz unter Minecraft-Last langsamer oder ist kurz nicht verfügbar.
 
 Siehe [architecture.md](architecture.md) für Architekturdiagramme und [features.md](features.md) für den Funktionsumfang.

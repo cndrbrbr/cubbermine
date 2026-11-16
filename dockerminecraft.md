@@ -200,6 +200,7 @@ Einstellungen im Pod:
 - `terminationGracePeriodSeconds: 90`; Java bekommt SIGTERM direkt und speichert die Welt. Zusätzlich ein `preStop`-Hook, der per RCON `save-all` und `stop` auslöst.
 - Probes: `startupProbe` (TCP 25565, großzügig, Weltgenerierung dauert), `readinessProbe` (RCON `list` bzw. TCP), `livenessProbe` nur zurückhaltend (sonst Neustart mitten im Speichern).
 - Ressourcen: `requests.memory` = Xmx + Overhead, `limits.memory` = Xmx × ca. 1,3 (Java braucht Metaspace, Threads, Netty-Puffer und bei GraalVM die JS-Engine außerhalb des Heaps). Heutiger Wert NC3: Xmx 3840 MiB → Limit ca. 5 GiB. Die genauen Werte sind im Pilot zu messen.
+- `priorityClassName: minecraft` (hohe Priorität): Minecraft-Pods gehen vor Nebendiensten wie der KI (Ollama) auf NC3, siehe [websites-monitoring.md](websites-monitoring.md), Abschnitt 3.3.
 - `nodeAffinity`/`nodeSelector` für Server mit lokalem Speicher (siehe 4.6); Toleration so, dass nichts auf der Control Plane landet.
 
 ### 4.4 Netzwerk und Zugang

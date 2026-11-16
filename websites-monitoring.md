@@ -187,10 +187,18 @@ Grundsätze:
 | Omasys (`cndrbrbr.de`) | Deployment (1 Replica) aus dem Omasys-Image, PVC für `/data` (Inhalt aus `omasys_omasys_data`), Secret für `POST_PASSWORD`, `OMA_PIN`, `JWT_SECRET`, Service, Ingress | kein Host-Port mehr; Image in CI bauen und archivieren |
 | NonameQuiz-Web (`ai.cndrbrbr.de`) | Deployment nginx mit den Dateien aus dem nonamequiz-Repository als Image, ConfigMap `nginx.conf`, Ingress | heute direkt aus dem Live-Checkout ausgeliefert → künftig Image je Stand |
 | NonameQuiz-KI-Proxy | Deployment aus dem bestehenden Proxy-Image, Secret für das Zugangstoken (`proxy.env`) | nur intern erreichbar (NetworkPolicy: von nonamequiz-web) |
-| Ollama | StatefulSet/Deployment mit fester Version statt `latest`, PVC für die Modelle (Inhalt aus `nonamequiz_ollama`), **Node fest NC3**, `requests`/`limits` CPU 6, RAM 8 GiB, `OLLAMA_KEEP_ALIVE`, `NUM_PARALLEL`, `MAX_QUEUE` wie heute | Rechenlast: CPU-Inferenz darf Minecraft-Pods auf demselben Node nicht ausbremsen → feste Reservierung, ggf. niedrigere Priorität (PriorityClass) als Minecraft |
+| Ollama | StatefulSet/Deployment mit fester Version statt `latest`, PVC für die Modelle (Inhalt aus `nonamequiz_ollama`), **Node fest NC3**, `OLLAMA_KEEP_ALIVE`, `NUM_PARALLEL`, `MAX_QUEUE` wie heute; **niedrigere Priorität als Minecraft** (siehe unten) | Entscheidung 16.11.2026: Minecraft geht vor, die KI nutzt nur, was übrig ist |
 | Kookie-Web (`kookie.cndrbrbr.de`) | Deployment nginx mit `site/` als Image, PVC für die Rezeptdaten (Inhalt aus `/var/lib/kookie/data`, nur lesend eingehängt), Basic Auth als Ingress-Middleware mit Secret | Passwortschutz wie heute (NDR-Inhalte) |
 | Kookie-Import | CronJob (vierteljährlich 1. Jan/Apr/Jul/Okt 03:40) mit den Images `kookie-kochbuch` und `kookie-importer`, schreibt in dasselbe PVC; Kochbuch-PDF als eigenes kleines PVC oder Secret/ConfigMap-Datei | ersetzt `kookie-import.timer` und `kookie-update.sh`; Regel „Rezepte nie löschen“ bleibt im Importer |
 | Backup | Omasys-Daten, Kookie-Daten und das Ollama-Modell-PVC (Modelle notfalls neu ladbar) in den Backup-Ablauf aus M2 aufnehmen | heute nicht im mineback-Ablauf |
+
+**Priorität Ollama < Minecraft (Entscheidung 16.11.2026).** Die KI darf freie Rechenleistung auf NC3 nutzen, muss aber zurückstehen, sobald die Minecraft-Server sie brauchen. Umsetzung:
+
+- **PriorityClass:** `minecraft` (hoch) für alle Minecraft-Pods, `ki-niedrig` (niedrig, `preemptionPolicy: Never`) für Ollama. Fehlt Platz für einen Minecraft-Pod, darf der Scheduler Ollama verdrängen; Ollama verdrängt nie einen anderen Pod. Bei Speicherknappheit räumt das Kubelet zuerst Pods mit niedriger Priorität.
+- **CPU:** kleine `requests` (z. B. 1 CPU) und `limits` 6 CPU. CPU-Zeit wird unter Last nach den `requests` verteilt; die Minecraft-Pods mit ihren höheren `requests` bekommen damit Vorrang, während Ollama in ruhigen Zeiten weiter bis zu 6 Kerne nutzen kann. Zusätzlich die Zahl der Threads begrenzen (`OLLAMA_NUM_THREADS` bzw. Modellparameter `num_thread`), damit Ollama nicht alle Kerne gleichzeitig belegt.
+- **RAM:** `requests` = `limits` 8 GiB, damit das geladene Modell nicht mitten in einer Anfrage wegen Speichermangel abgebrochen wird; der Speicher ist in der Kapazitätsplanung von NC3 fest eingerechnet.
+- **Folge für die Nutzer:** Unter Minecraft-Last antwortet NonameQuiz langsamer; im Extremfall wird Ollama vorübergehend verdrängt und startet neu, sobald wieder Platz ist. Die Weboberfläche von NonameQuiz sollte das mit einem Hinweis statt einem Fehler anzeigen.
+- **Prüfen im Pilot:** Antwortzeit von NonameQuiz und Tick-Zeit (TPS) der Minecraft-Server auf NC3, während beide gleichzeitig Last haben.
 
 ### 3.4 codefield.de: orbita2core
 
@@ -241,7 +249,7 @@ flowchart TB
             omasys["Omasys<br/>cndrbrbr.de"]
             nqweb["NonameQuiz-Web<br/>ai.cndrbrbr.de"]
             nqproxy["KI-Proxy"]
-            ollama["Ollama · mistral<br/>fest auf NC3 · 6 CPU · 8 GiB"]
+            ollama["Ollama · mistral<br/>fest auf NC3 · Priorität unter Minecraft"]
             kookie["Kookie-Web<br/>kookie.cndrbrbr.de"]
             kimport["Kookie-Import<br/>CronJob vierteljährlich"]
         end
@@ -330,4 +338,3 @@ flowchart TB
 5. **Minecraft-Router:** Namensrouting mit mc-router (Vorschlag) oder nur BungeeCord bzw. SRV-Einträge. (Die Namen der NC3-Server und Karten sind festgelegt, siehe 2.1.)
 6. **orbita2core-Adressen:** Unteradressen auf 443 (Vorschlag) oder bisherige Zusatzports; was `codefield.de` selbst zeigt.
 7. **Dauer der Weiterleitungen** von den alten Adressen (Vorschlag: mindestens ein Schuljahr) und ob die alten Minecraft-Ports übergangsweise weiter angeboten werden.
-8. **Ollama-Priorität:** Wie viel Rechenleistung darf die KI auf NC3 neben den Minecraft-Servern bekommen (feste 6 Kerne wie heute oder weniger mit niedrigerer Priorität)?
