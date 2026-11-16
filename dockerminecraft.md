@@ -48,9 +48,11 @@ Jeder Server-Container enthält einen eigenen SSH-Server mit genau zwei Benutzer
 | Benutzer | Werkzeug | Rechte |
 |---|---|---|
 | `mc-sftp` | FileZilla | nur SFTP, chroot auf `/sftp`; das Volume ist dort ein zweites Mal als `/sftp/server` eingehängt |
-| `mc-ctrl` | PuTTY, Adminpanel | `ForceCommand /mc-dispatch.sh`: nur `start`, `stop`, `status`, `version`, `restore`, `adduser`, `plugins`, `players`, `wipe`, `properties-*` (per `sudo` auf genau diese Skripte) |
+| `mc-ctrl` | nur noch das Adminpanel (intern) | `ForceCommand /mc-dispatch.sh`: nur `start`, `stop`, `status`, `version`, `restore`, `adduser`, `plugins`, `players`, `wipe`, `properties-*` (per `sudo` auf genau diese Skripte) |
 
-Das **Adminpanel hat keinen Zugriff auf den Docker-Socket**. Es steuert die Server genau wie ein Schüler über SSH mit dessen Schlüsseln (`mc-ctrl` für Befehle, `mc-sftp` für Uploads) bzw. über RCON innerhalb des Containers. Eine Lücke im Adminpanel gibt damit nicht mehr Rechte als PuTTY + FileZilla. Das ist der wichtigste Designgrundsatz des Projekts und soll erhalten bleiben.
+**Heutige Nutzung:** Schüler und Lehrkräfte verwalten ihre Server über die **Weboberfläche (Adminpanel)**: Start/Stopp, Plugins, Spieler, Einstellungen. PuTTY wird dafür nicht mehr genutzt. **FileZilla (SFTP) ist weiterhin im Einsatz**, um Dateien direkt auf den Server zu laden oder zu bearbeiten. Der `mc-ctrl`-Zugang besteht technisch noch, dient aber nur noch dem Adminpanel als interner Steuerweg.
+
+Das **Adminpanel hat keinen Zugriff auf den Docker-Socket**. Es steuert die Server über SSH mit den Schlüsseln des jeweiligen Servers (`mc-ctrl` für Befehle, `mc-sftp` für Uploads) bzw. über RCON innerhalb des Containers. Eine Lücke im Adminpanel gibt damit nicht mehr Rechte, als ein Schüler über seinen eigenen Server ohnehin hat. Das ist der wichtigste Designgrundsatz des Projekts und soll erhalten bleiben.
 
 ### 1.4 Stärken und Schwächen für Kubernetes
 
@@ -118,7 +120,7 @@ mcserverdockB ist kein lauffähiges Artefakt, aber der Grundgedanke passt besser
 | Start/Stopp | Markerdatei, Container läuft weiter | Container-Lebenszyklus | **`replicas: 1/0`** über die Cubbermine API |
 | Plugins | Katalog im Image, Sync vor Start | Volume | Katalog im Image, Sync im **initContainer** |
 | Konfiguration | `.env` + Kopie beim ersten Start + Watcher | Build-Args/Env | **ConfigMap + Secret**, angewendet im initContainer |
-| Schülerzugang | SSH im Container (SFTP + Befehle) | – | **SFTP-Sidecar**; Befehle über Adminpanel/API |
+| Schülerzugang | Weboberfläche (Adminpanel) + FileZilla (SFTP im Container); SSH-Befehle nur noch intern fürs Adminpanel | – | Weboberfläche über die API + **SFTP-Sidecar** für FileZilla |
 | Verwaltung | SSH als Schüler, RCON | – | **RCON über internen Service**, NetworkPolicy nur für die API |
 | Daten | Named Volume `/server` | anonyme Volumes `/world`, `/plugins` | **PVC je Server**, Layout `/server/data/{cfg,plugins,worlds}` bleibt |
 | Proxy | BungeeCord (Container-IPs zum Startzeitpunkt) | – | BungeeCord (später Velocity prüfen) über **stabile Service-Namen** |
@@ -205,14 +207,14 @@ Einstellungen im Pod:
 - **Spieler:** ein öffentlicher Einstieg auf Port 25565 (BungeeCord als `Deployment` mit `Service` vom Typ `LoadBalancer` über K3s ServiceLB oder `hostPort` auf einem festen Node). Die Backends haben nur `ClusterIP`-Services (`mc1.minecraft.svc`). Weil Service-Namen eine stabile IP haben, entfällt das heutige Problem, dass BungeeCord nach Neuanlage der Server zu falschen Containern routet.
 - **Server, die heute eigene Ports haben** (NC3 Standalone, 25565–25569): für die Übergangszeit eigene `LoadBalancer`-/NodePort-Services mit denselben Ports, damit sich für die Spieler nichts ändert. Langfristig alle hinter den Proxy.
 - **SFTP:** pro Server ein TCP-Service auf den Sidecar mit dem bisherigen Port `2220+N`, damit vorhandene Schülerschlüssel und FileZilla-Profile weiter gelten. Der Dienst ist nicht HTTP und läuft daher nicht über den Ingress.
-- **Verwaltung:** Die Cubbermine API spricht mit den Servern über **RCON** auf dem internen Service (Passwort aus Secret) und über die Kubernetes-API (nur `scale`/`get`/`logs` auf StatefulSets und Pods im eigenen Namespace). Eine `NetworkPolicy` erlaubt Port 25575 nur aus dem API-Pod und Port 25565 nur aus dem Proxy. Das ersetzt den `mc-ctrl`-Weg über SSH; die Befehle `start`, `stop`, `status`, `version`, `restore`, `adduser`, `plugins`, `players`, `wipe`, `properties` werden zu API-Endpunkten.
+- **Verwaltung:** Die Cubbermine API spricht mit den Servern über **RCON** auf dem internen Service (Passwort aus Secret) und über die Kubernetes-API (nur `scale`/`get`/`logs` auf StatefulSets und Pods im eigenen Namespace). Eine `NetworkPolicy` erlaubt Port 25575 nur aus dem API-Pod und Port 25565 nur aus dem Proxy. Das ersetzt den internen `mc-ctrl`-Weg des Adminpanels über SSH (PuTTY wird schon heute nicht mehr genutzt, ein SSH-Befehlszugang für Schüler ist daher nicht nötig); die Befehle `start`, `stop`, `status`, `version`, `restore`, `adduser`, `plugins`, `players`, `wipe`, `properties` werden zu API-Endpunkten.
 - **Weboberflächen** (Adminpanel, BlueMap auf Port 8100): HTTP-Ingress (Traefik aus K3s oder Caddy), getrennt vom Minecraft-TCP-Verkehr.
 
 ### 4.5 Konfiguration und Geheimnisse
 
 | Heute | Cubbermine |
 |---|---|
-| `.env`: `MCn_SFTP_PUBKEY`, `MCn_CTRL_PUBKEY` | Secret `mcN-sftp` (authorized_keys); der Ctrl-Schlüssel entfällt, sobald die API den Weg übernimmt |
+| `.env`: `MCn_SFTP_PUBKEY`, `MCn_CTRL_PUBKEY` | Secret `mcN-sftp` (authorized_keys, FileZilla-Zugang bleibt); der Ctrl-Schlüssel wird nur noch vom Adminpanel genutzt und entfällt mit der API |
 | `.rcon-password` auf dem Volume, im Container erzeugt | Secret `mcN-rcon`, von der API erzeugt |
 | Umgebungsvariablen `MC_MEM_*`, `MC_LEVELNAME`, `MC_SERVER_TYPE`, `MC_BUNGEECORD` | Felder der Cubbermine-Serverdefinition → StatefulSet-Env + ConfigMap |
 | `server.properties` aus dem Image, `watch_copy.sh` überträgt Änderungen | Standardwerte im Image, Overrides als ConfigMap; Anwendung im initContainer bei jedem Start |
@@ -345,7 +347,7 @@ sequenceDiagram
 | `ports: 25564+N:25565` (Standalone) | Übergang: LoadBalancer-Service je Server; Ziel: nur über Proxy |
 | `stop_grace_period: 60s` | `terminationGracePeriodSeconds: 90` + `preStop` |
 | `restart: unless-stopped` + Bash-Schleife | `restartPolicy: Always` (Pod) |
-| `mc-ctrl` + `mc-dispatch.sh` | API-Endpunkte (RCON + Kubernetes-API) |
+| `mc-ctrl` + `mc-dispatch.sh` (nur noch vom Adminpanel genutzt, PuTTY entfallen) | API-Endpunkte (RCON + Kubernetes-API) |
 | `version <x>` (BuildTools auf dem Volume) | Image-Tag wechseln |
 | `restore <datum>` (`mc-restore.sh`, `BACKUP_URL`) | Restore-Job der API |
 | `MC_SERVER_TYPE=custom` | Image `cubbermine/custom-runtime`, `start.sh` vom PVC |
@@ -356,7 +358,7 @@ sequenceDiagram
 
 1. **Image-Pipeline:** Spigot-Image für 26.3 in CI bauen (inkl. Plugin-Katalog), in eine Registry (z. B. GHCR) pushen. Lokal mit einer Kopie eines `mcN_data`-Volumes starten und prüfen, dass Welt, Plugins, Whitelist und Ops unverändert übernommen werden.
 2. **Pilot (M2):** ein nichtkritischer Server als StatefulSet mit `local-path`-PVC, initContainer und SFTP-Sidecar; Proxy-Anbindung, Start/Stopp per Skalierung, Backup + Restore einer Testwelt, Pod-Neustart ohne Datenverlust.
-3. **API-Anbindung (M3):** Befehle des Dispatchers nacheinander als API-Endpunkte; Adminpanel auf die API umstellen.
+3. **API-Anbindung (M3):** Befehle des Dispatchers nacheinander als API-Endpunkte; die Weboberfläche (Adminpanel) auf die API umstellen. Für Nutzer ändert sich dabei nichts, weil sie schon heute nur die Weboberfläche und FileZilla verwenden.
 4. **Umzug je Server (M4):** Wartungsfenster → Compose-Server stoppen → Backup → Restore in das PVC → K3s-Server starten → Test → DNS/Port umschalten. Der Compose-Container bleibt gestoppt (nicht gelöscht) bis zur Abnahme; Rückfall = K3s auf `replicas: 0`, Compose wieder starten.
 5. **Proxy und Lobby zuletzt**, wenn alle Backends im Cluster laufen.
 
