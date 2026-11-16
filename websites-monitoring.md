@@ -65,9 +65,9 @@ Diese Punkte sollten unabhängig von der Migration behoben werden:
 | Prometheus ist auf MeckMinecraft auf Port 9090 ohne Anmeldung öffentlich erreichbar (zusätzlich zum ebenfalls öffentlichen `/api/prometheus/`) | Jeder kann alle Metriken lesen, die Admin-Oberfläche nutzen und teure Abfragen stellen | Port 9090 nicht mehr veröffentlichen; `/api/prometheus/` auf lesende Abfragen (`/api/v1/query`, `query_range`) beschränken |
 | Grafana ist auf MeckMinecraft auf Port 3000 öffentlich, nur über HTTP | Anmeldedaten gehen unverschlüsselt über das Netz | Nur noch über Caddy mit HTTPS anbieten; das Admin-Passwort steht in der Compose-Datei als `admin` und muss geändert sein |
 | Omasys ist auf NC3 zusätzlich direkt auf Port 3000 per HTTP öffentlich erreichbar (an Caddy vorbei) | Anmeldung (PIN/Passwort) unverschlüsselt möglich | Port nur noch intern veröffentlichen (`127.0.0.1:3000` oder gar nicht) |
-| Prometheus hat kein Volume für `/prometheus` | Die Messdaten (zurzeit 1 GB) gehen beim Neuanlegen des Containers verloren | Volume ergänzen |
+| Prometheus speichert nur in einem anonymen Volume (nicht „kein Volume“, wie zuerst notiert) | Bei `docker compose down` würde es verwaist; ein neuer Container stünde ohne die Messdaten (1,1 GB) da | Benanntes Volume |
 | Images ohne festen Tag (`prom/prometheus`, `grafana/grafana`, `ollama/ollama:latest`) | Ein `pull` kann unbemerkt auf eine neue Hauptversion springen | Versionen festschreiben |
-| Viele lokale, nicht eingecheckte Änderungen im minecraftDash-Repository auf MeckMinecraft (Homepage-Seiten, Caddyfile, Compose-Datei) | Die Homepage lässt sich aus Git nicht wiederherstellen und nicht als Image bauen | Vor der Migration einchecken |
+\1\n\n**Stand 16.11.2026 (abends):** Behoben sind Prometheus und Grafana (nur lokal, Grafana über `https://grafana.meckminecraft.de`), Omasys (nur lokal), das benannte Prometheus-Volume (Daten übernommen), feste Versionen (Prometheus v3.11.0, Grafana 12.4.2, Ollama 0.35.0) und das Einchecken von minecraftDash (Commit `d7dc594`, node_exporter-Passwort in `secrets/` außerhalb von Git). Offen: der offene `/api/prometheus/`-Pfad und die Firewall auf Codefield (vorbereitet). Details: [planning.md](planning.md), Abschnitt S.
 
 ---
 
@@ -334,8 +334,8 @@ flowchart TB
 
 **Vorbereitung (unabhängig vom Cluster):**
 
-1. Befunde aus 1.5 beheben: Ports 9090/3000 auf MeckMinecraft und 3000 auf NC3 schließen, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen.
-2. Lokale Änderungen von minecraftDash auf MeckMinecraft einchecken (Homepage, Caddyfile, Grafana-Provisioning ohne Geheimnisse), damit alles aus Git gebaut werden kann.
+1. ✅ (bis auf `/api/prometheus/` nur lesend) Befunde aus 1.5 beheben: Ports 9090/3000 auf MeckMinecraft und 3000 auf NC3 schließen, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen.
+2. ✅ Lokale Änderungen von minecraftDash auf MeckMinecraft einchecken (Homepage, Caddyfile, Grafana-Provisioning ohne Geheimnisse), damit alles aus Git gebaut werden kann.
 3. Ankündigung der neuen Adressen vorbereiten (Homepage, Weboberfläche, E-Mail an Lehrkräfte), besonders für die Minecraft-Adressen, die sich nicht weiterleiten lassen.
 
 **Monitoring zuerst** (früh in M2, damit der Cluster von Anfang an überwacht ist):

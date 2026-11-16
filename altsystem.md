@@ -1,6 +1,6 @@
 # Cubbermine – Beschreibung des Altsystems
 
-**Stand:** 16.11.2026, erhoben direkt auf den drei Hosts (laufende Container, Compose-Projekte, Volumes, Timer, offene Ports). Dieses Dokument beschreibt das **heute produktiv laufende System auf Docker-Compose-Basis**, das durch Cubbermine abgelöst werden soll. Zielarchitektur: [architecture.md](architecture.md); Analyse der Minecraft-Images: [dockerminecraft.md](dockerminecraft.md); Websites und Dienste: [websites-monitoring.md](websites-monitoring.md).
+**Stand:** 16.11.2026, erhoben direkt auf den drei Hosts; aktualisiert am selben Abend nach den ersten Sofortmaßnahmen ([planning.md](planning.md), Abschnitt S) (laufende Container, Compose-Projekte, Volumes, Timer, offene Ports). Dieses Dokument beschreibt das **heute produktiv laufende System auf Docker-Compose-Basis**, das durch Cubbermine abgelöst werden soll. Zielarchitektur: [architecture.md](architecture.md); Analyse der Minecraft-Images: [dockerminecraft.md](dockerminecraft.md); Websites und Dienste: [websites-monitoring.md](websites-monitoring.md).
 
 ---
 
@@ -102,10 +102,10 @@ Gemeinsam auf allen drei Hosts: Debian GNU/Linux 13 (trixie), Kernel 6.12.113, D
 | | `mc1`–`mc5` | eigenes Spigot-Image | SSH 2221–2225, Metriken 9941–9945 |
 | | `adminpanel` | eigenes Image (Python 3.12) | – (über Caddy) |
 | `minecraftdash` (`/root/mcDashProject/minecraftDash`) | `caddy` | `caddy:2-alpine` | 80, 443 |
-| | `prometheus` | `prom/prometheus` | **9090** |
-| | `grafana` | `grafana/grafana` | **3000** |
+| | `prometheus` | `prom/prometheus:v3.11.0` | 9090 nur lokal (`127.0.0.1`); öffentlich nur `/api/prometheus/` über Caddy |
+| | `grafana` | `grafana/grafana:12.4.2` | 3000 nur lokal; öffentlich über Caddy `https://grafana.meckminecraft.de` |
 
-**Volumes (Größe):** `lobby_data` 1,1 GB, `mc1_data` 620 MB, `mc2_data` 560 MB, `mc3_data` 460 MB, `mc4_data` 400 MB, `mc5_data` 2,0 GB, `bungee_data` 50 MB, `adminpanel_data` 0,7 MB, `grafana-data` 51 MB, Caddy-Zertifikate. Dazu rund 20 anonyme Volumes (Reste früherer Container, u. a. eines mit 1,1 GB).
+**Volumes (Größe):** `lobby_data` 1,1 GB, `mc1_data` 620 MB, `mc2_data` 560 MB, `mc3_data` 460 MB, `mc4_data` 400 MB, `mc5_data` 2,0 GB, `bungee_data` 50 MB, `adminpanel_data` 0,7 MB, `grafana-data` 51 MB, Caddy-Zertifikate. `prometheus-data` 1,1 GB (benannt seit 16.11.2026). Dazu rund 20 anonyme Volumes (Reste früherer Container, u. a. das frühere anonyme Prometheus-Volume mit 1,1 GB, dessen Daten ins benannte Volume kopiert wurden).
 
 **Zeitgesteuert:** root-Cron stündlich `update-server-names.py` (schreibt Servernamen/MOTD für die Homepage-Karten), mineback-Agent 02:15.
 
@@ -121,10 +121,10 @@ Gemeinsam auf allen drei Hosts: Debian GNU/Linux 13 (trixie), Kernel 6.12.113, D
 | | `mc2`–`mc5` | eigenes Spigot-Image | Minecraft 25566–25569, SSH 2222–2225, Metriken 9942–9945 |
 | | `adminpanel` | eigenes Image | – (über omasys-caddy) |
 | `omasys` (`/root/omasys/omasys`) | `omasys-caddy` | `caddy:2-alpine` | 80, 443 (HTTPS-Einstieg für **alle** Dienste auf NC3) |
-| | `omasys` | eigenes Image (Node-App) | **3000** |
+| | `omasys` | eigenes Image (Node-App) | 3000 nur lokal (`127.0.0.1`, über `.env` seit 16.11.2026) |
 | `nonamequiz` (`/root/nonamequiz-deploy`) | `nonamequiz-web` | `nginx:alpine` (Dateien direkt aus `/root/nonamequiz`) | – |
 | | `nonamequiz-ai-proxy` | eigenes Image | – |
-| | `nonamequiz-ollama` | `ollama/ollama:latest` (mistral, nur CPU, max. 6 Kerne / 8 GB) | – |
+| | `nonamequiz-ollama` | `ollama/ollama:0.35.0` (mistral, nur CPU, max. 6 Kerne / 8 GB) | – |
 | `kookie` (`/root/kookie/deploy`) | `kookie-web` | `nginx:alpine` | – |
 
 Alle Webdienste hängen am Netz `omasys_default`, damit `omasys-caddy` sie erreicht; `mc4` und `mc5` ebenfalls (für die BlueMaps).
@@ -159,7 +159,7 @@ Alle Webdienste hängen am Netz `omasys_default`, damit `omasys-caddy` sie errei
 
 **Zeitgesteuert:** mineback-Agent 02:15.
 
-**Hinweise:** Der Workshop-Server hat kein RCON; Konsolenbefehle nur über `docker attach`. Er wird **nicht** mit `start_production.sh` gestartet (das würde einen zweiten Caddy auf 80/443 starten), sondern mit `docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d` und Umgebungsvariablen für Domain, IDE- und Upload-Adresse. Port 9940 ist nicht durch eine Firewallregel geschützt.
+**Hinweise:** Der Workshop-Server hat kein RCON; Konsolenbefehle nur über `docker attach`. Er wird **nicht** mit `start_production.sh` gestartet (das würde einen zweiten Caddy auf 80/443 starten), sondern mit `docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d` und Umgebungsvariablen für Domain, IDE- und Upload-Adresse. Port 9940 ist noch nicht durch eine Firewallregel geschützt; die Regel ist vorbereitet (`/root/fw-metrics.sh`, Unit `mc-firewall.service`), aber noch nicht aktiviert.
 
 ---
 
@@ -190,7 +190,7 @@ Je Host ein Caddy mit Let's-Encrypt-Zertifikaten:
 
 | Host | Caddy | Domains → Ziel |
 |---|---|---|
-| MeckMinecraft | `caddy` (minecraftDash) | `meckminecraft.de` → statische Homepage + `/api/prometheus/*` → Prometheus; `admin.meckminecraft.de` → Adminpanel; `karte-inigresso.meckminecraft.de` → BlueMap `mc2:8100` |
+| MeckMinecraft | `caddy` (minecraftDash) | `meckminecraft.de` → statische Homepage + `/api/prometheus/*` → Prometheus; `admin.meckminecraft.de` → Adminpanel; `grafana.meckminecraft.de` → Grafana (seit 16.11.2026); `karte-inigresso.meckminecraft.de` → BlueMap `mc2:8100` |
 | NC3 | `omasys-caddy` | `cndrbrbr.de` → Omasys; `ai.cndrbrbr.de` → NonameQuiz; `admin.cndrbrbr.de` → Adminpanel; `kookie.cndrbrbr.de` → Kookie (Basic Auth); `karte.cndrbrbr.de` → BlueMap `mc5:8100`; `karte-softsurvival.cndrbrbr.de` → BlueMap `mc4:8100` |
 | Codefield | `caddy-proxy` (`admin off`) | `codefield.de`, `www.codefield.de` → Workshop-Homepage; `javascript.codefield.de` → IDE; `upload.codefield.de` → `spigot:25580`; `karte.codefield.de` → BlueMap `spigot:8100`; `o2c.codefield.de:35581–35583/35591–35593` → orbita2core |
 
@@ -231,9 +231,9 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 | 22/tcp | SSH (Admin) | SSH (Admin, mineback-Tresor) | SSH (Admin) |
 | 80, 443/tcp | Caddy | omasys-caddy | caddy-proxy |
 | 2221–2225/tcp | SFTP mc1–mc5 | SFTP mc1–mc5 | – |
-| 3000/tcp | **Grafana (HTTP)** | **Omasys (HTTP)** | – |
+| 3000/tcp | nur lokal (Grafana, seit 16.11.2026) | nur lokal (Omasys, seit 16.11.2026) | – |
 | 8088/tcp | – | nginx (Backups für `restore`) | – |
-| 9090/tcp | **Prometheus (ohne Anmeldung)** | – | – |
+| 9090/tcp | nur lokal (Prometheus, seit 16.11.2026) | – | – |
 | 9100/tcp | node_exporter (Basic Auth) | node_exporter (Basic Auth) | node_exporter (Basic Auth) |
 | 9940–9945/tcp | Metriken (9940 von außen gesperrt) | Metriken (nur von MeckMinecraft) | Metriken 9940 (offen) |
 | 24454/udp | – | Voice-Chat mc1 (Forge) | – |
@@ -263,11 +263,11 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 
 | Bereich | Befund |
 |---|---|
-| Sicherheit | Prometheus (:9090, ohne Anmeldung), Grafana (:3000) und Omasys (:3000) sind direkt per HTTP öffentlich erreichbar; `/api/prometheus/` ist vollständig offen; keine Host-Firewall; Metrik-Port 9940 auf Codefield offen |
+| Sicherheit | ~~Prometheus (:9090), Grafana (:3000) und Omasys (:3000) direkt per HTTP öffentlich~~ – behoben 16.11.2026; `/api/prometheus/` ist vollständig offen; keine Host-Firewall; Metrik-Port 9940 auf Codefield offen |
 | Backups | Der Tresor aller drei Hosts liegt auf NC3 selbst: Fällt NC3 aus, sind die Backups von NC3 **und** der Zugriff auf alle anderen Backups betroffen; es gibt keine Kopie an einem anderen Ort. Aufbewahrung nur des letzten Stands (`keep_last = 1`) plus markierte Sonderstände. Eine Offsite-Kopie ist geplant ([planning.md](planning.md), Abschnitt S) |
 | Speicher | NC3-Platte zu 77 % belegt; rund 86 GB in ungenutzten alten Volumes und 39 GB in manuellen Backup-Ordnern |
-| Daten | Prometheus ohne Volume (Messdaten gehen beim Neuanlegen verloren); Images ohne feste Version (`prom/prometheus`, `grafana/grafana`, `ollama/ollama:latest`) |
-| Nachvollziehbarkeit | lokale, nicht eingecheckte Änderungen (minecraftDash, generierte Compose-Dateien, Caddyfiles); von Hand ergänzte Konfigurationsblöcke, die bei `setup.sh` verloren gehen |
+| Daten | ~~Prometheus nur mit anonymem Volume; Images ohne feste Version~~ – behoben 16.11.2026 (benanntes Volume; Prometheus v3.11.0, Grafana 12.4.2, Ollama 0.35.0) |
+| Nachvollziehbarkeit | lokale, nicht eingecheckte Änderungen (generierte Compose-Dateien, Caddyfiles; minecraftDash am 16.11.2026 eingecheckt); von Hand ergänzte Konfigurationsblöcke, die bei `setup.sh` verloren gehen |
 | Betrieb | Spigot-Build zur Laufzeit (lange Erststarts); BungeeCord löst Backend-Adressen nur beim Start auf (nach Neuanlage der Server `bungee` neu starten); kein gemeinsames Netz, jede Querverbindung über öffentliche IPs; Verwaltung je Host getrennt (zwei Adminpanels, drei Caddy-Konfigurationen) |
 | Verfügbarkeit | jeder Dienst hängt an genau einem Host; bei Ausfall eines Hosts sind dessen Server und Websites weg, bei NC3 zusätzlich der Backup-Tresor |
 

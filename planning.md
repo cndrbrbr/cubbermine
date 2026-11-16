@@ -27,10 +27,13 @@ Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/
 
 **Sicherheit und Ordnung**
 
-- [ ] Prometheus (:9090) und Grafana (:3000) auf MeckMinecraft sowie Omasys (:3000) auf NC3 nicht mehr öffentlich; Grafana nur über HTTPS; Metrik-Port 9940 auf Codefield auf MeckMinecraft beschränken.
-- [ ] Prometheus-Volume ergänzen, feste Image-Versionen (Prometheus, Grafana, Ollama).
-- [ ] Lokale Änderungen von minecraftDash einchecken.
-- [ ] Ungenutzte Volumes und manuelle Backup-Ordner auf NC3 prüfen (rund 86 GB + 39 GB) und nach Sichtprüfung und Freigabe aufräumen.
+- [x] Prometheus (:9090) und Grafana (:3000) auf MeckMinecraft nur noch lokal; Grafana über `https://grafana.meckminecraft.de` (erledigt 16.11.2026).
+- [x] Omasys (:3000) auf NC3 nur noch lokal (erledigt 16.11.2026; dabei fehlte eine `.env`, Omasys lief kurz mit Standard-Zugangsdaten — jetzt `.env` mit festen Werten).
+- [ ] Metrik-Port 9940 auf Codefield auf MeckMinecraft beschränken: Skript `/root/fw-metrics.sh` und Unit `mc-firewall.service` liegen bereit (wie auf NC3); Aktivierung durch den Admin: `systemctl enable --now mc-firewall`.
+- [ ] `/api/prometheus/` auf MeckMinecraft auf lesende Abfragen beschränken (heute vollständig offen).
+- [x] Prometheus-Daten vom anonymen in ein benanntes Volume übernommen; feste Versionen Prometheus v3.11.0, Grafana 12.4.2, Ollama 0.35.0 (jeweils bitgleich mit den bisher laufenden Images; erledigt 16.11.2026).
+- [x] Lokale Änderungen von minecraftDash eingecheckt (Commit `d7dc594`); node_exporter-Passwort aus `prometheus.yml` in `secrets/` außerhalb von Git verschoben, `.gitignore` für `secrets/` und `*.bak-*` (erledigt 16.11.2026).
+- [ ] Ungenutzte Volumes und manuelle Backup-Ordner auf NC3 aufräumen: Liste erstellt (16.11.2026), Freigabe offen. Größte Posten: `minecraft_mcsrv25` (69 GB, alte Welten u. a. `Ehleworlds`, `creative`, `ehle25`), `minecraft_run` (17 GB), `/root/hostMC/backup` (21 GB), `/root/hostMC/backup2` (18 GB), `/root/mcag` (17 GB). Vorschlag: vor dem Löschen auf die Storage Box archivieren.
 
 **Gate:** Eine verschlüsselte Kopie aller Backups liegt an einem anderen Standort, wird überwacht und ein Restore daraus ist nachgewiesen; die offenen HTTP-Ports sind geschlossen.
 
