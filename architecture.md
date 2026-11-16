@@ -16,6 +16,8 @@ Cubbermine ist eine geplante Kubernetes-basierte Minecraft-Hosting-Plattform. Ei
 
 **Bestehende Verwaltung:** Auf MeckMinecraft und NC3 läuft je ein **Adminpanel** (Weboberfläche, `admin.meckminecraft.de` bzw. `admin.cndrbrbr.de`) aus dem Projekt minecraftHostingServer. Schüler und Lehrkräfte melden sich mit E-Mail, Passwort und einem Code per E-Mail an und verwalten dort ihre Server: Start/Stopp, Plugins, Spieler und Einstellungen; Lehrkräfte weisen Server zu und geben sie frei. Das Adminpanel hat keinen Docker-Socket; es steuert die Server über SSH mit den Schlüsseln des jeweiligen Servers und über RCON, hat also nicht mehr Rechte als ein Schüler auf seinem eigenen Server. PuTTY wird für die Verwaltung nicht mehr genutzt. Für den direkten Dateizugriff nutzen Schüler weiterhin **FileZilla** (SFTP, je Server ein eigener Port, chroot auf den eigenen Server). Codefield hat kein Adminpanel. Details: [dockerminecraft.md](dockerminecraft.md), Abschnitt 1.3.
 
+**Backup außerhalb des Rechenzentrums (seit 16.11.2026):** Eine **Hetzner Storage Box BX21 (5 TB) in Helsinki** nimmt jede Nacht eine mit restic verschlüsselte Kopie des mineback-Tresors von NC3 auf. Der Zugang von NC3 darf dort nur anhängen, nicht löschen. Details: [backups.md](backups.md), [altsystem.md](altsystem.md).
+
 Die Docker-Bridge-Netzwerke sind **hostlokal**; ein gemeinsames Cluster-Netz oder bestehende private Verbindungen sind aus den Inventaren **nicht nachgewiesen**.
 
 ## Control-Plane-Strategie und Ausbaupfad
@@ -108,7 +110,17 @@ flowchart TB
       ctrl -. "erzeugt / aktualisiert" .-> pods
       pods --> pvcs[("Persistente Welten<br/>PVCs / Storage")]
       pods -. "Metriken / Logs" .-> obs["Monitoring / Logging"]
+      bjobs["Backup-CronJobs<br/>restic · nur anhängen"]
+      pvcs --> bjobs
+      cp -. "Datastore-Snapshots" .-> bjobs
     end
+
+    subgraph hz["Hetzner Storage Box · Helsinki · außerhalb des Clusters"]
+      archive[("Backup- und Image-Archiv<br/>verschlüsselt · Box-Snapshots")]
+    end
+    registry["Container-Registry"] -. "OCI-Archive" .-> archive
+    bjobs -->|"SSH :23"| archive
+    admin["Admin-Zugang<br/>Aufräumen · Restore"] -.-> archive
 
     tcp --> proxy
     https --> ingress
@@ -130,7 +142,14 @@ flowchart LR
     cp4 <-->|"K3s-Steuerung"| b
     cp4 <-->|"K3s-Steuerung"| c
   end
+  box[("Hetzner Storage Box<br/>Helsinki")]
+  a -.->|"Backup · Internet · SSH :23"| box
+  b -.->|"Backup · Internet · SSH :23"| box
+  c -.->|"Backup · Internet · SSH :23"| box
+  cp4 -.->|"Datastore-Snapshot"| box
 ```
+
+Die Storage Box liegt bewusst **außerhalb** des privaten Overlay-Netzes und bei einem anderen Anbieter an einem anderen Standort. Die Nodes erreichen sie über das Internet (SSH, Port 23). Fällt der Cluster, ein Node oder das ganze Rechenzentrum aus, bleiben die Backups erreichbar.
 
 Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte Kubernetes-Endpunkte vorgesehen. Für Node-zu-Node-Kommunikation werden private VPN-Adressen festgelegt. Vor Inbetriebnahme: K3s-Kompatibilität des Netzwerks, Routing, MTU, Latenz, Firewall und DNS prüfen.
 
@@ -143,6 +162,13 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 - **Minecraft-Proxy:** zentraler öffentlich erreichbarer TCP-Einstieg; Backends nur intern. BungeeCord kann übernommen oder Velocity später geprüft werden.
 - **Web-UI:** Weiterentwicklung des bestehenden Adminpanels (heute je eine Instanz auf MeckMinecraft und NC3). In Cubbermine gibt es **eine gemeinsame Weboberfläche für alle Server**, unabhängig davon, auf welchem Node sie laufen; die bisherigen Domains leiten dorthin um. Sie arbeitet über die Cubbermine API statt über SSH je Server; Deployment und HTTP Ingress/Gateway. Ingress ersetzt **nicht** automatisch einen Minecraft-TCP-Proxy. Einen SSH-Befehlszugang für Nutzer (früher PuTTY) gibt es nicht mehr.
 - **Dateizugang:** SFTP für FileZilla als Sidecar im Minecraft-Pod, eigener TCP-Service je Server, bisherige Ports und Schlüssel bleiben (siehe [dockerminecraft.md](dockerminecraft.md)).
+- **Backup und Archiv (Hetzner Storage Box, entschieden 16.11.2026):** zentrales Ziel außerhalb des Clusters für
+  - Welt-Backups aller Minecraft-Server (CronJob je Server bzw. von der API ausgelöst: RCON `save-off`/`save-all flush`, restic, `save-on`),
+  - Snapshots des K3s-Datastores der Control Plane,
+  - das Image-Archiv (OCI-Archive jedes produktiv genutzten Images),
+  - Zugangsdateien und Konfiguration, die nicht in Git stehen (verschlüsselt).
+
+  Alles wird vor dem Hochladen mit restic verschlüsselt. Jede Quelle bekommt einen eigenen SSH-Schlüssel mit festem Befehl `rclone serve restic --append-only <repo>`: Sie kann nur anhängen, nicht löschen. Das Aufräumen (`forget --prune`) läuft mit einem Admin-Schlüssel, der nicht im Cluster liegt; zusätzlich gibt es Box-Snapshots. Bis zur Migration läuft die heutige Offsite-Kopie des mineback-Tresors weiter. Details: [backups.md](backups.md), [planning.md](planning.md) (Abschnitt S, M2).
 - **Storage:** PVC/StorageClass, getestete Backups und Restore. Lokaler Speicher bindet den Pod üblicherweise an einen Node; echtes Failover braucht geeignete Storage- und Datenstrategie.
 - **Adresskonzept (Entscheidung 16.11.2026):** **meckminecraft.de** ist die Hauptadresse für alles rund um Minecraft (Homepage, Statusseite, gemeinsame Weboberfläche `admin.meckminecraft.de`, Grafana, Karten, Minecraft-Server, JavaScript-Workshop); **cndrbrbr.de** für die anderen Themen (Omasys, NonameQuiz mit lokaler KI, Kookie); **codefield.de** für orbita2core. Alte HTTP-Adressen leiten weiter; Minecraft-Server werden über einen Router auf Port 25565 nach Namen erreicht. Details: [websites-monitoring.md](websites-monitoring.md).
 - **Websites und Dienste:** zustandslose Websites als Deployments hinter dem HTTP-Ingress (Namespace `websites`); Omasys, NonameQuiz/Ollama und Kookie im Namespace `cndrbrbr` (Ollama fest auf NC3 mit niedrigerer Priorität als die Minecraft-Server, Kookie-Import als CronJob); orbita2core im Namespace `orbita2core`. BlueMaps und der Skript-Upload laufen im jeweiligen Minecraft-Pod.
@@ -159,7 +185,8 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 | Konfiguration | ConfigMap, Secret |
 | Projekt/Mandant | Namespace, RBAC, ResourceQuota, NetworkPolicy |
 | Speicher | PersistentVolumeClaim + StorageClass |
-| Betrieb | Probes, Metrics, Events, Backup-Jobs |
+| Betrieb | Probes, Metrics, Events |
+| Backup | CronJob je Server (restic → Storage Box), Secret mit SSH-Schlüssel (nur anhängen) und restic-Passwort, NetworkPolicy für ausgehendes SSH :23 |
 
 ## Bereitstellungsablauf (Soll)
 
@@ -172,13 +199,13 @@ Die öffentlichen IP-Adressen sind Bestandsdaten und **nicht** als ungeschützte
 
 ## Sicherheit
 
-Kubernetes-API nur über VPN/administrativen Zugang. RBAC mit minimalen Rechten, TLS, restriktive Pod-Sicherheit, Netzwerksegmentierung/NetworkPolicies (CNI-Unterstützung prüfen), keine Secrets im Git, sichere Proxy-Weiterleitung, Rate-Limits und Audit-Logging. Öffentlich freigeben nur benötigte Ports; Minecraft-Backends nicht direkt exponieren. Grundsatz aus dem bestehenden Adminpanel beibehalten: Die Weboberfläche bzw. API erhält nur die Rechte, die sie für die eigenen Minecraft-Ressourcen braucht; Nutzer bekommen keinen Shell- oder SSH-Befehlszugang, nur Weboberfläche und chroot-SFTP.
+Kubernetes-API nur über VPN/administrativen Zugang. Backups verlassen den Cluster nur verschlüsselt; Backup-Zugänge können auf der Storage Box nur anhängen, der Löschzugang liegt nicht im Cluster; restic-Passwörter zusätzlich offline. RBAC mit minimalen Rechten, TLS, restriktive Pod-Sicherheit, Netzwerksegmentierung/NetworkPolicies (CNI-Unterstützung prüfen), keine Secrets im Git, sichere Proxy-Weiterleitung, Rate-Limits und Audit-Logging. Öffentlich freigeben nur benötigte Ports; Minecraft-Backends nicht direkt exponieren. Grundsatz aus dem bestehenden Adminpanel beibehalten: Die Weboberfläche bzw. API erhält nur die Rechte, die sie für die eigenen Minecraft-Ressourcen braucht; Nutzer bekommen keinen Shell- oder SSH-Befehlszugang, nur Weboberfläche und chroot-SFTP.
 
 ## Offene Architekturentscheidungen / Risiken
 
 1. Neuen Control-Plane-Host beschaffen und dimensionieren; Phase-1-Datastore, Backup/Restore und Single-Point-of-Failure dokumentieren; Phase-2-etcd/Quorum-Migrationspfad gesondert testen.
 2. WireGuard-Topologie, private Adressen, DNS, MTU, CNI und Firewall.
-3. StorageClass, PVC-Bindung, Hostausfall und Backup/Restore.
+3. StorageClass, PVC-Bindung, Hostausfall und Backup/Restore. Backup-Ziel ist entschieden (Hetzner Storage Box, restic); offen sind die Aufbewahrungsregeln im Cluster, die Datastore-Snapshots der Control Plane und regelmäßige Restore-Tests.
 4. Minecraft-Proxy (BungeeCord oder Velocity), öffentliche TCP-Adresse und Portstrategie.
 5. K3s-Version, Node-Kapazität, Java-RAM-Overhead, CPU und Pod-Platzierung.
 6. API-Schnittstellen, Operator/Controller oder Kubernetes-Client, Auth, Mandantentrennung.
