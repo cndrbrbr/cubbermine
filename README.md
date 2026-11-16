@@ -31,18 +31,23 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 7. **Härtung und Betrieb (M5):** Monitoring, Alerts, regelmäßige Restore- und Ausfalltests.
 8. **Optional HA ausbauen (M1b):** später zwei weitere Control-Plane-Server, sofern Bedarf besteht; die Netzwerkqualität lässt es zu.
 
-## Dokumentation
+## Dokumentation – empfohlene Lesereihenfolge
 
-| Dokument | Inhalt |
-| --- | --- |
-| [altsystem.md](altsystem.md) | Beschreibung des heute laufenden Altsystems (drei Docker-Compose-Hosts): Architektur, technischer Aufbau, Ports, Backups, Monitoring, Befunde |
-| [architecture.md](architecture.md) | Aktuelle Infrastruktur und K3s-Zielarchitektur mit Mermaid-Diagrammen |
-| [features.md](features.md) | Geplanter Funktionsumfang und Prioritäten |
-| [planning.md](planning.md) | Meilensteine, Aufgaben und Migrationsplanung, inkl. Image- und Backup-Archiv (M2) |
-| [dockerminecraft.md](dockerminecraft.md) | Analyse der bestehenden Minecraft-Docker-Images und Container-/Pod-Konzept für Cubbermine mit Architekturdiagramm |
-| [websites-monitoring.md](websites-monitoring.md) | Adresskonzept (meckminecraft.de / cndrbrbr.de / codefield.de) und Übernahme aller Websites, Dienste und des Monitorings in den Cluster, Befunde im Bestand, Architekturdiagramm |
-| [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | Messauftrag und Ergebnisse der Netzwerkmessung zwischen den Hosts (Abschnitt 9) |
-| [messdaten/](messdaten/) | Rohdaten der Netzwerkmessung |
-| [perfscripts/](perfscripts/) | Mess- und Auswerteskripte der Netzwerkmessung |
+Die Dokumentation ist so geordnet, dass man **zuerst den heutigen Betrieb und die Messgrundlagen**, danach **die Kubernetes-Zielarchitektur und ihre technischen Teilkonzepte** und zuletzt **Funktionsumfang und Umsetzungsplan** kennenlernt. Die Messdaten und Skripte dienen zur Vertiefung beziehungsweise zur Überprüfung der Messergebnisse.
+
+| Reihenfolge | Dokument | Warum lesen? |
+| ---: | --- | --- |
+| 1 | [altsystem.md](altsystem.md) | **Ausgangspunkt:** Heutige Docker-Compose-Hosts, Dienste, Zugänge und Betriebsrisiken verstehen. |
+| 2 | [PreNetzwerkmessung.md](PreNetzwerkmessung.md) | **Machbarkeit:** Messauftrag, Verfahren und Ergebnisse zur Verbindungsqualität zwischen den Hosts nachvollziehen. |
+| 3 | [messdaten/](messdaten/) | **Nachweise:** Die zur Netzwerkmessung abgelegten Rohdaten und Auswertungen einsehen. |
+| 4 | [perfscripts/](perfscripts/) | **Reproduzierbarkeit:** Mess- und Auswerteskripte für eigene Prüfungen verwenden. |
+| 5 | [architecture.md](architecture.md) | **Gesamtbild:** Den geplanten K3s-Cluster mit dedizierter Control Plane, drei Workern und Mermaid-Diagrammen verstehen. |
+| 6 | [dockerminecraft.md](dockerminecraft.md) | **Minecraft-Technik:** Bestehende Images und das geplante Container-/Pod-Modell samt Speicher und Zugriffskonzept kennenlernen. |
+| 7 | [websites-monitoring.md](websites-monitoring.md) | **Begleitdienste:** Künftige Domains, Websites, weitere Anwendungen und Monitoring im Cluster einordnen. |
+| 8 | [registries.md](registries.md) | **Softwarebereitstellung:** GHCR, GitHub Actions, Image-Versionierung und die spätere Auslieferung an K3s verstehen. |
+| 9 | [features.md](features.md) | **Anforderungen:** Geplante Funktionen und deren Prioritäten mit dem heutigen Adminpanel vergleichen. |
+| 10 | [planning.md](planning.md) | **Umsetzung:** Meilensteine, Abhängigkeiten, Abnahmekriterien und die schrittweise Migration durchgehen. |
+
+**Für einen schnellen Einstieg** reichen zunächst die Punkte **1, 5, 9 und 10**. Wer die technischen Entscheidungen prüfen oder die Migration praktisch umsetzen möchte, liest die übrigen Dokumente in der angegebenen Reihenfolge.
 
 Die Reihenfolge der Umsetzung und technische Entscheidungen werden anhand der Messungen und Pilotversuche überprüft.
