@@ -46,8 +46,9 @@ Die Dokumentation ist so geordnet, dass man **zuerst den heutigen Betrieb und di
 | 6 | [dockerminecraft.md](dockerminecraft.md) | **Minecraft-Technik:** Bestehende Images und das geplante Container-/Pod-Modell samt Speicher und Zugriffskonzept kennenlernen. |
 | 7 | [websites-monitoring.md](websites-monitoring.md) | **Begleitdienste:** Künftige Domains, Websites, weitere Anwendungen und Monitoring im Cluster einordnen. |
 | 8 | [registries.md](registries.md) | **Softwarebereitstellung:** GHCR, GitHub Actions, Image-Versionierung und die spätere Auslieferung an K3s verstehen. |
-| 9 | [features.md](features.md) | **Anforderungen:** Geplante Funktionen und deren Prioritäten mit dem heutigen Adminpanel vergleichen. |
-| 10 | [planning.md](planning.md) | **Umsetzung:** Meilensteine, Abhängigkeiten, Abnahmekriterien und die schrittweise Migration durchgehen. |
+| 9 | [backups.md](backups.md) | **Datensicherung:** Backupkonzept mit Architektur (mineback-Tresor, Offsite-Kopie mit restic auf der Hetzner Storage Box, Windows-Rechner mit Kopia) und Schritt-für-Schritt-Anleitungen. |
+| 10 | [features.md](features.md) | **Anforderungen:** Geplante Funktionen und deren Prioritäten mit dem heutigen Adminpanel vergleichen. |
+| 11 | [planning.md](planning.md) | **Umsetzung:** Meilensteine, Abhängigkeiten, Abnahmekriterien und die schrittweise Migration durchgehen. |
 
 **Für einen schnellen Einstieg** reichen zunächst die Punkte **1, 5, 9 und 10**. Wer die technischen Entscheidungen prüfen oder die Migration praktisch umsetzen möchte, liest die übrigen Dokumente in der angegebenen Reihenfolge.
 
