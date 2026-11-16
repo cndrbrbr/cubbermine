@@ -400,7 +400,7 @@ Die Unterbrechung begann also gegen 05:17:38 Uhr, dauerte mindestens 7 Sekunden 
 - Paketverlust: 0,03–0,04 % auf vier Pfaden, 0 % auf zwei → formal **Prüfbedarf** (> 0–0,1 %). Der Verlust geht aber vollständig auf die eine Unterbrechung zurück und ist nicht über die Zeit verteilt.
 - Stabilität: eine einzelne kurze Unterbrechung (Sekunden bis höchstens 1 Minute) in 46,5 h → **Prüfbedarf** („Einzelne Unterbrechungen“), keine wiederkehrenden Ausfälle.
 
-Für K3s ist eine Unterbrechung dieser Länge unkritisch: Der Node-Status wechselt erst nach 40 s ohne Heartbeat auf `NotReady`, Pods werden standardmäßig erst nach 5 Minuten verdrängt. Für embedded etcd (Phase 2) könnte eine solche Unterbrechung eine Leader-Neuwahl auslösen; das Cluster erholt sich davon selbst, sollte aber überwacht werden. Tritt das Ereignis bis zum Ende der Messung (17.11.2026, 22:05 Uhr) nicht erneut auf, bleibt es bei einem Einzelfall.
+Für K3s ist eine Unterbrechung dieser Länge unkritisch: Der Node-Status wechselt erst nach 40–50 s ohne Heartbeat auf `NotReady` (je nach Kubernetes-Version), Pods werden standardmäßig erst nach 5 Minuten verdrängt. Für embedded etcd (Phase 2) könnte eine solche Unterbrechung eine Leader-Neuwahl auslösen; das Cluster erholt sich davon selbst, sollte aber überwacht werden. Tritt das Ereignis bis zum Ende der Messung (17.11.2026, 22:05 Uhr) nicht erneut auf, bleibt es bei einem Einzelfall.
 
 ### 9.7 Offene Punkte
 
