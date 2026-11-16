@@ -365,7 +365,7 @@ sequenceDiagram
 
 ## 8. Offene Entscheidungen
 
-1. **Container-Registry und Archiv:** GHCR (öffentlich/privat) oder eigene Registry; Zugangsdaten als `imagePullSecret`. Dazu der Archivspeicher für Images (OCI-Archive) und Welt-Backups außerhalb der Nodes (siehe [planning.md](planning.md), M2).
+1. **Container-Registry und Archiv:** GHCR (öffentlich/privat) oder eigene Registry; Zugangsdaten als `imagePullSecret`. Archivspeicher für Images (OCI-Archive) und Welt-Backups ist festgelegt: Hetzner Storage Box mit restic (siehe [planning.md](planning.md), Abschnitt S und M2).
 2. **Version pro Image oder pro Server:** Ein Image-Tag je Minecraft-Version deckt Spigot ab. Schüler, die heute frei per `version` beliebige Versionen bauen, bekommen nur noch eine freigegebene Liste – ist das gewollt?
 3. **SFTP-Sidecar vs. zentraler SFTP-Dienst:** Sidecar ist einfach und hält das bisherige Modell, kostet aber einen öffentlichen Port je Server. Ein zentraler Dienst (z. B. SFTPGo) bräuchte Zugriff auf alle PVCs – mit RWO-Volumes auf verschiedenen Nodes ist das schwierig.
 4. **Schreibrecht auf die Jar:** Bisher kann der Schüler alles in `/server` ändern; im Konzept liegt die Jar schreibgeschützt im Image. Für Ausnahmen bleibt der `custom`-Typ.

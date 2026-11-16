@@ -14,13 +14,14 @@ Diese Punkte betreffen das laufende Altsystem ([altsystem.md](altsystem.md), Abs
 
 Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/lib/mineback`, 831 GB). Alle drei Hosts stehen beim selben Provider, sehr wahrscheinlich im selben Rechenzentrum. Ein Ausfall von NC3 oder des Rechenzentrums, ein Fehler beim Provider oder ein kompromittierter Host würde Server **und** Backups treffen.
 
-- [ ] Ziel festlegen: Speicher bei einem **anderen Provider an einem anderen Standort** (z. B. Storage-Box oder S3-kompatibler Objektspeicher); Kosten für rund 1 TB plus Wachstum abschätzen. Dasselbe Ziel später als Archiv für den Cluster nutzen (M2).
-- [ ] Kopie umsetzen als mineback-Feature **T9 „Offsite replication“** (in mineback geplant, noch nicht umgesetzt): `restic` oder `rclone` überträgt `store/` des Tresors; `public/` wird nicht kopiert, weil es sich daraus neu erzeugen lässt. Weil `store/` nur ergänzt wird, ist eine abgebrochene Übertragung nie inkonsistent. Bis T9 fertig ist, übergangsweise ein Skript mit systemd-Timer auf NC3.
-- [ ] **Verschlüsselung beim Absender:** Die Spieldaten liegen im Tresor unverschlüsselt (nur Geheimnisse sind mit `age` verschlüsselt); die Kopie wird deshalb vor dem Hochladen verschlüsselt (restic-Repository bzw. rclone `crypt`). Schlüssel nicht beim Speicheranbieter ablegen.
+- [x] Ziel festgelegt (Entscheidung 16.11.2026): **Hetzner Storage Box mit restic**, also anderer Provider als netcup. Standort **Helsinki (HEL1)** statt Falkenstein (FSN1), um möglichst weit vom netcup-Rechenzentrum entfernt zu sein. Dasselbe Ziel dient später als Archiv für den Cluster (M2).
+- [ ] Storage Box bestellen. Vorschlag **BX21 (5 TB, 10,90 €/Monat zzgl. MwSt., ca. 12,97 € brutto)**: Der Tresor hat heute 831 GB; die längere Aufbewahrung und die Box-Snapshots brauchen zusätzlichen Platz, und auch das Cluster-Archiv (Images, Welt-Backups) soll dort liegen. BX11 (1 TB, 3,20 €/Monat zzgl. MwSt., ca. 3,81 € brutto) wäre schon beim Start fast voll. Größere Stufen: BX31 10 TB 20,80 €, BX41 20 TB 40,60 € (jeweils zzgl. MwSt.). Preise laut Hetzner-Website am 16.11.2026; Datenverkehr unbegrenzt, keine Mindestlaufzeit, Wechsel der Stufe möglich. Eine Einrichtungsgebühr wird auf der Seite erwähnt, aber nicht beziffert, deshalb bei der Bestellung prüfen.
+- [ ] Kopie umsetzen als mineback-Feature **T9 „Offsite replication“** (in mineback geplant, noch nicht umgesetzt): **restic** sichert `store/` des Tresors in ein Repository auf der Storage Box (Zugang per SSH auf Port 23, eigener Unterbenutzer nur für dieses Verzeichnis); `public/` wird nicht kopiert, weil es sich daraus neu erzeugen lässt. Weil `store/` nur ergänzt wird, ist eine abgebrochene Übertragung nie inkonsistent. Bis T9 fertig ist, übergangsweise ein Skript mit systemd-Timer auf NC3.
+- [ ] **Verschlüsselung beim Absender:** Die Spieldaten liegen im Tresor unverschlüsselt (nur Geheimnisse sind mit `age` verschlüsselt); restic verschlüsselt das Repository immer. Das restic-Passwort liegt nur auf NC3 und offline, nicht auf der Storage Box.
 - [ ] **Schlüssel getrennt sichern:** Den `age`-Schlüssel des Tresors (`/etc/mineback/vault_identity.txt`) und den Schlüssel der Offsite-Kopie offline aufbewahren (Papier/USB, mindestens zwei Orte). Ohne sie ist die Kopie wertlos.
 - [ ] **Zeitplan und Bandbreite:** täglich nach den Backup-Läufen (z. B. 05:00, Agenten laufen um 02:15), mit Bandbreitenbegrenzung, damit die Minecraft-Server nicht leiden; die erste Übertragung (~830 GB) über mehrere Nächte verteilen.
 - [ ] **Längere Aufbewahrung in der Kopie** als im Tresor (dort nur `keep_last = 1` plus markierte Stände): Vorschlag täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; Löschungen im Tresor dürfen nicht sofort in die Kopie durchschlagen.
-- [ ] Zugang zur Kopie so einrichten, dass NC3 nur schreiben, aber keine alten Stände löschen kann (Append-only bzw. eigener Zugang für das Aufräumen), damit ein kompromittierter Host die Kopie nicht zerstören kann.
+- [ ] Zugang zur Kopie so einrichten, dass NC3 nur schreiben, aber keine alten Stände löschen kann, damit ein kompromittierter Host die Kopie nicht zerstören kann: Der SSH-Schlüssel von NC3 bekommt in der Storage Box einen festen Befehl `rclone serve restic --stdio --append-only <repo>` (laut restic-Forum auf der Storage Box möglich, nicht offiziell von Hetzner beschrieben, deshalb zuerst testen). Aufräumen (`restic forget --prune`) läuft mit einem zweiten Schlüssel, der nicht auf NC3 liegt. Zusätzlich automatische **Box-Snapshots** (BX21: bis zu 20) als zweite Absicherung; sie zählen gegen den Speicherplatz.
 - [ ] **Überwachung:** Alter der letzten erfolgreichen Offsite-Kopie als Metrik, Grafana-Alarm per Discord, wenn sie älter als 36 Stunden ist.
 - [ ] **Restore-Test aus der Kopie:** einen Server von einem Rechner außerhalb von NC3 aus der Offsite-Kopie wiederherstellen (mineback `drill`), danach regelmäßig wiederholen.
 
@@ -110,7 +111,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 
 **Archiv für Welt-Backups**
 
-- [ ] Archivspeicher festlegen: **anderer Provider, anderer Standort** als die Nodes, weil alle Nodes im selben Rechenzentrum stehen; vorzugsweise dasselbe Ziel wie die Offsite-Kopie aus Abschnitt S. Ein Backup auf einem Node des Clusters zählt nicht als Archiv.
+- [x] Archivspeicher: **Hetzner Storage Box** aus Abschnitt S (anderer Provider und Standort als die Nodes, die alle im selben Rechenzentrum stehen); Welt-Backups per restic, Image-Archive (OCI) in einem eigenen Verzeichnis bzw. Unterbenutzer. Ein Backup auf einem Node des Clusters zählt nicht als Archiv.
 - [ ] Backup-Job je Server: RCON `save-off` + `save-all flush`, `cfg`/`plugins`/`worlds` als ZIP im bisherigen `backup.sh`-Format, Upload ins Archiv, `save-on`.
 - [ ] Aufbewahrung festlegen und automatisieren, Vorschlag: täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; zusätzlich ein Backup vor jeder Migration, jedem Versionswechsel und jedem `wipe`, das nicht automatisch gelöscht wird.
 - [ ] Prüfsummen und Verschlüsselung der Archive; Zugangsdaten nur als Secret.
@@ -182,7 +183,7 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
 | P0 | Sicherheitsgrundlagen/Monitoring (kube-prometheus-stack, Grafana, externer Wächter) | Cluster |
-| P0 | **Offsite-Kopie der Backups** (verschlüsselt, anderer Provider/Standort, überwacht, Restore-Test) – Abschnitt S | Wahl des Speicherziels |
+| P0 | **Offsite-Kopie der Backups** mit restic auf Hetzner Storage Box BX21 in Helsinki (verschlüsselt, append-only, überwacht, Restore-Test) – Abschnitt S | Bestellung der Storage Box |
 | P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana (meck) und Omasys (NC3) nicht öffentlich, Prometheus-Volume, minecraftDash einchecken – Abschnitt S | – |
 | P1 | Adresskonzept umsetzen: Ingress, Weiterleitungen, Minecraft-Router | Ingress, DNS |
 | P1 | meckminecraft.de und JavaScript-Workshop (von codefield.de) in den Cluster | Ingress, Monitoring, Minecraft-Pilot |
