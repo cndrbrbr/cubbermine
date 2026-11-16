@@ -290,13 +290,13 @@ Die abschließende Entscheidung erfolgt erst nach Auswertung der Messdaten und p
 
 **Stand:** 16.11.2026. Phase A ist weitgehend abgeschlossen: Kurzmessungen und iperf3-Tests sind ausgewertet, die Langzeitmessung ist nach rund 46,5 Stunden zwischenausgewertet (9.6) und läuft noch bis 17.11.2026, 22:05 Uhr.
 
-Rohdaten und Skripte liegen in [messdaten/](messdaten/).
+Rohdaten liegen in [messdaten/](messdaten/), die Mess- und Auswerteskripte in [perfscripts/](perfscripts/).
 
 ### 9.1 Vorbemerkungen zum Plan
 
 Gegen den Plan gab es keine grundsätzlichen Einwände. Bei der Durchführung wurde Folgendes ergänzt bzw. angepasst:
 
-- **Firewall:** Auf allen drei Hosts steht die INPUT-Policy auf `ACCEPT`, eine Host-Firewall gibt es nicht. Damit Port 5201 wie gefordert nur zwischen den Messhosts offen ist, setzt `netmess-iperf.sh` für jeden Server-Host vorübergehend iptables-Regeln: ACCEPT von den beiden anderen Host-IPs, für alle anderen DROP (Kommentar `netmess`). Nach dem Lauf werden die Regeln wieder entfernt, auch bei einem Abbruch (`trap`). Die Regeln werden nicht persistent gespeichert.
+- **Firewall:** Auf allen drei Hosts steht die INPUT-Policy auf `ACCEPT`, eine Host-Firewall gibt es nicht. Damit Port 5201 wie gefordert nur zwischen den Messhosts offen ist, setzt [`netmess-iperf.sh`](perfscripts/netmess-iperf.sh) für jeden Server-Host vorübergehend iptables-Regeln: ACCEPT von den beiden anderen Host-IPs, für alle anderen DROP (Kommentar `netmess`). Nach dem Lauf werden die Regeln wieder entfernt, auch bei einem Abbruch (`trap`). Die Regeln werden nicht persistent gespeichert.
 - **MTU:** Der Plan untersucht die MTU erst beim WireGuard-Vergleich, `planning.md` (M0) verlangt sie aber schon für Phase A. Deshalb wurde zusätzlich ein Ping mit gesetztem DF-Bit gemessen (1472/1473 Byte Nutzlast).
 - **Langzeitmessung:** Sie läuft 72 Stunden lang (bevorzugte Dauer laut Plan) als systemd-Unit `netmess-lz-<ziel>` mit `RuntimeMaxSec=72h` und beendet sich danach selbst.
 - **iperf3:** Gemessen wird nachts (Start 15.11.2026, 04:00 Uhr), damit die Minecraft-Server nicht beeinträchtigt werden. Für jede gerichtete Verbindung gibt es zwei 60-Sekunden-Läufe: normal und mit `-R`.
@@ -367,7 +367,7 @@ Der 2-Sekunden-Funktionstest vom 14.11.2026 ist nur noch der Vollständigkeit ha
 
 ### 9.6 Langzeitmessung (Zwischenauswertung nach 46,5 h)
 
-Messzeit: 14.11.2026, 22:05 Uhr bis 16.11.2026, 20:34 Uhr (Samstagabend bis Montagabend, zwei volle Tag-Nacht-Zyklen). Je Richtung 2.706–2.707 Messblöcke zu je 10 Pings, also rund 27.000 Pakete pro Richtung und gut 162.000 insgesamt. In keinem Log fehlt ein Messblock (kein Abstand über 75 s), alle sechs Units liefen durch. Rohdaten (gzip): [messdaten/langzeit/](messdaten/langzeit/), Auswerteskript: [messdaten/netmess-longterm-auswertung.py](messdaten/netmess-longterm-auswertung.py).
+Messzeit: 14.11.2026, 22:05 Uhr bis 16.11.2026, 20:34 Uhr (Samstagabend bis Montagabend, zwei volle Tag-Nacht-Zyklen). Je Richtung 2.706–2.707 Messblöcke zu je 10 Pings, also rund 27.000 Pakete pro Richtung und gut 162.000 insgesamt. In keinem Log fehlt ein Messblock (kein Abstand über 75 s), alle sechs Units liefen durch. Rohdaten (gzip): [messdaten/langzeit/](messdaten/langzeit/), Auswerteskript: [perfscripts/netmess-longterm-auswertung.py](perfscripts/netmess-longterm-auswertung.py).
 
 | Quelle → Ziel | Pakete gesendet / verloren | Verlust | RTT min | RTT avg | Median | p99 | p99,9 | max | Jitter (mdev je Block, Ø) | Pakete > 10 ms |
 |---|---|---|---|---|---|---|---|---|---|---|
