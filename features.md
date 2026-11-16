@@ -19,7 +19,7 @@ Auf MeckMinecraft (`admin.meckminecraft.de`) und NC3 (`admin.cndrbrbr.de`) läuf
 | Lehrkräfte | Server an Schüler zuweisen und freigeben (optional zurücksetzen), Konten einladen/löschen, weitere Admins, Lobby nur für Admins |
 | Protokoll | die letzten 40 Aktionen (wer hat was auf welchem Server getan) |
 | Dateien | FileZilla/SFTP je Server, chroot auf den eigenen Server (außerhalb der Weboberfläche) |
-| Backups | Wiederherstellen nur über den Steuerbefehl `restore <datum|latest>`, **nicht** in der Weboberfläche |
+| Backups | Wiederherstellen nur über den Steuerbefehl `restore <datum>` bzw. `restore latest`, **nicht** in der Weboberfläche |
 
 Monitoring mit Prometheus/Grafana und Discord-Alerts läuft ebenfalls bereits (auf MeckMinecraft).
 
