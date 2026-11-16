@@ -6,6 +6,33 @@
 
 ## Meilensteine
 
+### S – Sofortmaßnahmen im Bestand (parallel zu M0/M1, unabhängig vom Cluster)
+
+Diese Punkte betreffen das laufende Altsystem ([altsystem.md](altsystem.md), Abschnitt 6) und werden nicht bis zur Migration aufgeschoben.
+
+**Backup-Kopie an einem anderen Ort**
+
+Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/lib/mineback`, 831 GB). Alle drei Hosts stehen beim selben Provider, sehr wahrscheinlich im selben Rechenzentrum. Ein Ausfall von NC3 oder des Rechenzentrums, ein Fehler beim Provider oder ein kompromittierter Host würde Server **und** Backups treffen.
+
+- [ ] Ziel festlegen: Speicher bei einem **anderen Provider an einem anderen Standort** (z. B. Storage-Box oder S3-kompatibler Objektspeicher); Kosten für rund 1 TB plus Wachstum abschätzen. Dasselbe Ziel später als Archiv für den Cluster nutzen (M2).
+- [ ] Kopie umsetzen als mineback-Feature **T9 „Offsite replication“** (in mineback geplant, noch nicht umgesetzt): `restic` oder `rclone` überträgt `store/` des Tresors; `public/` wird nicht kopiert, weil es sich daraus neu erzeugen lässt. Weil `store/` nur ergänzt wird, ist eine abgebrochene Übertragung nie inkonsistent. Bis T9 fertig ist, übergangsweise ein Skript mit systemd-Timer auf NC3.
+- [ ] **Verschlüsselung beim Absender:** Die Spieldaten liegen im Tresor unverschlüsselt (nur Geheimnisse sind mit `age` verschlüsselt); die Kopie wird deshalb vor dem Hochladen verschlüsselt (restic-Repository bzw. rclone `crypt`). Schlüssel nicht beim Speicheranbieter ablegen.
+- [ ] **Schlüssel getrennt sichern:** Den `age`-Schlüssel des Tresors (`/etc/mineback/vault_identity.txt`) und den Schlüssel der Offsite-Kopie offline aufbewahren (Papier/USB, mindestens zwei Orte). Ohne sie ist die Kopie wertlos.
+- [ ] **Zeitplan und Bandbreite:** täglich nach den Backup-Läufen (z. B. 05:00, Agenten laufen um 02:15), mit Bandbreitenbegrenzung, damit die Minecraft-Server nicht leiden; die erste Übertragung (~830 GB) über mehrere Nächte verteilen.
+- [ ] **Längere Aufbewahrung in der Kopie** als im Tresor (dort nur `keep_last = 1` plus markierte Stände): Vorschlag täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; Löschungen im Tresor dürfen nicht sofort in die Kopie durchschlagen.
+- [ ] Zugang zur Kopie so einrichten, dass NC3 nur schreiben, aber keine alten Stände löschen kann (Append-only bzw. eigener Zugang für das Aufräumen), damit ein kompromittierter Host die Kopie nicht zerstören kann.
+- [ ] **Überwachung:** Alter der letzten erfolgreichen Offsite-Kopie als Metrik, Grafana-Alarm per Discord, wenn sie älter als 36 Stunden ist.
+- [ ] **Restore-Test aus der Kopie:** einen Server von einem Rechner außerhalb von NC3 aus der Offsite-Kopie wiederherstellen (mineback `drill`), danach regelmäßig wiederholen.
+
+**Sicherheit und Ordnung**
+
+- [ ] Prometheus (:9090) und Grafana (:3000) auf MeckMinecraft sowie Omasys (:3000) auf NC3 nicht mehr öffentlich; Grafana nur über HTTPS; Metrik-Port 9940 auf Codefield auf MeckMinecraft beschränken.
+- [ ] Prometheus-Volume ergänzen, feste Image-Versionen (Prometheus, Grafana, Ollama).
+- [ ] Lokale Änderungen von minecraftDash einchecken.
+- [ ] Ungenutzte Volumes und manuelle Backup-Ordner auf NC3 prüfen (rund 86 GB + 39 GB) und nach Sichtprüfung und Freigabe aufräumen.
+
+**Gate:** Eine verschlüsselte Kopie aller Backups liegt an einem anderen Standort, wird überwacht und ein Restore daraus ist nachgewiesen; die offenen HTTP-Ports sind geschlossen.
+
 ### M0 – Inventarisierung und Architekturentscheidungen
 
 - [ ] Inventare aller Hosts verifizieren: CPU, RAM, Disk, Netzwerk, Firewall, laufende Container, Volumes und Compose-Dateien.
@@ -62,7 +89,7 @@ Grundlage ist das Container- und Pod-Konzept in [dockerminecraft.md](dockerminec
 
 **Monitoring im Cluster** (Konzept: [websites-monitoring.md](websites-monitoring.md))
 
-- [ ] Vorab im Bestand beheben: Prometheus (:9090) und Grafana (:3000) auf MeckMinecraft sowie Omasys (:3000) auf NC3 nicht mehr öffentlich, Grafana nur über HTTPS, Prometheus-Volume, feste Image-Versionen (auch Ollama); lokale Änderungen von minecraftDash einchecken.
+- [ ] Voraussetzung: Sofortmaßnahmen „Sicherheit und Ordnung“ aus Abschnitt S erledigt.
 - [ ] kube-prometheus-stack im Namespace `monitoring` mit PVC und festgelegter Aufbewahrung installieren; bisherige Compose-Ziele zusätzlich statisch scrapen.
 - [ ] Minecraft-Pods per `PodMonitor` (Port 9940) erfassen; Labels `server_name` und `machine` beibehalten.
 - [ ] Grafana mit bestehenden Dashboards, Alert-Regeln und Discord-Benachrichtigung aus Git provisionieren (Webhook und Admin-Passwort als Secret), Ingress mit TLS.
@@ -83,7 +110,7 @@ Ein Image lässt sich später nicht zuverlässig neu bauen: BuildTools wird imme
 
 **Archiv für Welt-Backups**
 
-- [ ] Archivspeicher außerhalb der Worker-Nodes festlegen (S3-kompatibler Objektspeicher oder Storage-Box beim Provider bzw. an einem anderen Standort); ein Backup auf demselben Host wie der Server zählt nicht als Archiv.
+- [ ] Archivspeicher festlegen: **anderer Provider, anderer Standort** als die Nodes, weil alle Nodes im selben Rechenzentrum stehen; vorzugsweise dasselbe Ziel wie die Offsite-Kopie aus Abschnitt S. Ein Backup auf einem Node des Clusters zählt nicht als Archiv.
 - [ ] Backup-Job je Server: RCON `save-off` + `save-all flush`, `cfg`/`plugins`/`worlds` als ZIP im bisherigen `backup.sh`-Format, Upload ins Archiv, `save-on`.
 - [ ] Aufbewahrung festlegen und automatisieren, Vorschlag: täglich 14 Tage, wöchentlich 8 Wochen, monatlich 12 Monate; zusätzlich ein Backup vor jeder Migration, jedem Versionswechsel und jedem `wipe`, das nicht automatisch gelöscht wird.
 - [ ] Prüfsummen und Verschlüsselung der Archive; Zugangsdaten nur als Secret.
@@ -155,7 +182,8 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 | P0 | StatefulSet + Service + Proxy-Pilot | K3s, Storage |
 | P0 | Cubbermine API + Umstellung des bestehenden Adminpanels auf die API | Kubernetes-Pilot |
 | P0 | Sicherheitsgrundlagen/Monitoring (kube-prometheus-stack, Grafana, externer Wächter) | Cluster |
-| P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana (meck) und Omasys (NC3) nicht öffentlich, Prometheus-Volume, minecraftDash einchecken | – |
+| P0 | **Offsite-Kopie der Backups** (verschlüsselt, anderer Provider/Standort, überwacht, Restore-Test) – Abschnitt S | Wahl des Speicherziels |
+| P0 | Sofortmaßnahmen im Bestand: Prometheus/Grafana (meck) und Omasys (NC3) nicht öffentlich, Prometheus-Volume, minecraftDash einchecken – Abschnitt S | – |
 | P1 | Adresskonzept umsetzen: Ingress, Weiterleitungen, Minecraft-Router | Ingress, DNS |
 | P1 | meckminecraft.de und JavaScript-Workshop (von codefield.de) in den Cluster | Ingress, Monitoring, Minecraft-Pilot |
 | P1 | Omasys, NonameQuiz/Ollama, Kookie (cndrbrbr.de) in den Cluster | Ingress, Backup-Ablauf |
@@ -182,7 +210,8 @@ Ausgangspunkt ist das bestehende Adminpanel aus minecraftHostingServer (Weboberf
 - Lokale Weltdaten verhindern transparente Verschiebung zwischen Nodes.
 - Doppelter Weltzugriff verursacht Datenverlust.
 - Images lassen sich nicht reproduzierbar neu bauen (BuildTools, Plugin-Downloads); ohne Image-Archiv sind alte Welten ggf. nicht mehr startbar.
-- Backups auf demselben Host oder im selben Rechenzentrum gehen bei einem Ausfall mit verloren.
+- Backups auf demselben Host oder im selben Rechenzentrum gehen bei einem Ausfall mit verloren. **Heute der Fall:** der Tresor aller Hosts liegt auf NC3 (Gegenmaßnahme: Abschnitt S).
+- Gehen die Schlüssel der verschlüsselten Offsite-Kopie verloren, ist die Kopie unbrauchbar; sie müssen offline und getrennt aufbewahrt werden.
 - Unterschiedliche Java-/Minecraft-/Plugin-Versionen bei Migration.
 - Kollisionen mit bestehenden öffentlichen Ports und Reverse Proxies.
 - Geänderte Minecraft-Adressen (Workshop, NC3-Server) lassen sich nicht weiterleiten; ohne rechtzeitige Ankündigung finden Schüler ihre Server nicht mehr.

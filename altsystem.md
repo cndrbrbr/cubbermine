@@ -264,7 +264,7 @@ Repository [mineback](https://github.com/cndrbrbr/mineback).
 | Bereich | Befund |
 |---|---|
 | Sicherheit | Prometheus (:9090, ohne Anmeldung), Grafana (:3000) und Omasys (:3000) sind direkt per HTTP öffentlich erreichbar; `/api/prometheus/` ist vollständig offen; keine Host-Firewall; Metrik-Port 9940 auf Codefield offen |
-| Backups | Der Tresor aller drei Hosts liegt auf NC3 selbst: Fällt NC3 aus, sind die Backups von NC3 **und** der Zugriff auf alle anderen Backups betroffen; es gibt keine Kopie an einem anderen Ort. Aufbewahrung nur des letzten Stands (`keep_last = 1`) plus markierte Sonderstände |
+| Backups | Der Tresor aller drei Hosts liegt auf NC3 selbst: Fällt NC3 aus, sind die Backups von NC3 **und** der Zugriff auf alle anderen Backups betroffen; es gibt keine Kopie an einem anderen Ort. Aufbewahrung nur des letzten Stands (`keep_last = 1`) plus markierte Sonderstände. Eine Offsite-Kopie ist geplant ([planning.md](planning.md), Abschnitt S) |
 | Speicher | NC3-Platte zu 77 % belegt; rund 86 GB in ungenutzten alten Volumes und 39 GB in manuellen Backup-Ordnern |
 | Daten | Prometheus ohne Volume (Messdaten gehen beim Neuanlegen verloren); Images ohne feste Version (`prom/prometheus`, `grafana/grafana`, `ollama/ollama:latest`) |
 | Nachvollziehbarkeit | lokale, nicht eingecheckte Änderungen (minecraftDash, generierte Compose-Dateien, Caddyfiles); von Hand ergänzte Konfigurationsblöcke, die bei `setup.sh` verloren gehen |

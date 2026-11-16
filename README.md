@@ -22,6 +22,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 
 ## Anstehende Arbeiten
 
+0. **Sofortmaßnahmen im Bestand** ([planning.md](planning.md), Abschnitt S): verschlüsselte Kopie aller Backups an einem anderen Standort (heute liegen sie nur auf NC3), offene HTTP-Ports schließen.
 1. **Netzwerkmessung abschließen:** Langzeitmessung nach Ende am 17.11.2026 abschließend prüfen (Wiederholung der Unterbrechung?) und die Bewertung in [PreNetzwerkmessung.md](PreNetzwerkmessung.md) festschreiben.
 2. **Offene Entscheidungen treffen:** Control-Plane-Server (Empfehlung: selber Provider/Standort), Speicherstrategie, Container-Registry und Archivspeicher, Minecraft-Proxy (BungeeCord oder Velocity), siehe [dockerminecraft.md](dockerminecraft.md), Abschnitt 8.
 3. **Control Plane bereitstellen und Cluster-Netz aufbauen (M1):** Server anmieten, WireGuard mit MTU 1420, K3s installieren, Datastore-Backup testen, die drei Worker aufnehmen.
