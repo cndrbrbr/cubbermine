@@ -4,7 +4,7 @@
 
 Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hosting-Infrastruktur von **Docker Compose** zu einem **gemeinsamen Kubernetes-/K3s-Cluster**. Ziel ist eine zentral verwaltete Plattform, über die Minecraft-Server bereitgestellt und betrieben werden können.
 
-> **Projektstatus (16.11.2026):** Architektur- und Planungsphase, Meilenstein M0 (Bestandsaufnahme und Architekturentscheidungen) weitgehend abgeschlossen. Die Netzwerkmessung zwischen den drei Hosts ist ausgewertet (Empfehlung: **geeignet**), das Konzept für die Minecraft-Container steht. Es ist noch kein Cluster installiert; die bestehende Infrastruktur läuft unverändert mit Docker Compose.
+> **Projektstatus (16.11.2026):** Architektur- und Planungsphase, Meilenstein M0 (Bestandsaufnahme und Architekturentscheidungen) läuft: Inventar und Netzwerkmessung sind erledigt, die Entscheidungen zu Control-Plane-Server, Storage und Proxy stehen noch aus. Die Netzwerkmessung zwischen den drei Hosts ist ausgewertet (Empfehlung: **geeignet**), das Konzept für die Minecraft-Container steht. Es ist noch kein Cluster installiert; die bestehende Infrastruktur läuft unverändert mit Docker Compose.
 
 ## Bisherige Aktivitäten
 
