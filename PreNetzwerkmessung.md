@@ -288,7 +288,7 @@ Die abschließende Entscheidung erfolgt erst nach Auswertung der Messdaten und p
 
 ## 9. Ergebnisse
 
-**Stand:** 16.11.2026. Phase A ist weitgehend abgeschlossen: Kurzmessungen und iperf3-Tests sind ausgewertet, die Langzeitmessung ist nach rund 46,5 Stunden zwischenausgewertet (9.6) und läuft noch bis 17.11.2026, 22:05 Uhr.
+**Stand:** 18.11.2026. Phase A ist abgeschlossen: Kurzmessungen, iperf3-Tests und die 72-stündige Langzeitmessung (14.–17.11.2026) sind ausgewertet. Die Bewertung in 9.8 ist endgültig.
 
 Rohdaten liegen in [messdaten/](messdaten/), die Mess- und Auswerteskripte in [perfscripts/](perfscripts/).
 
@@ -365,24 +365,24 @@ Bewertung: Für K3s ist das **kein Ausschlusskriterium**. Der Effekt tritt nur a
 
 Der 2-Sekunden-Funktionstest vom 14.11.2026 ist nur noch der Vollständigkeit halber in [messdaten/iperf-funktionstest-2s/](messdaten/iperf-funktionstest-2s/) abgelegt.
 
-### 9.6 Langzeitmessung (Zwischenauswertung nach 46,5 h)
+### 9.6 Langzeitmessung (72 h, Abschlussauswertung)
 
-Messzeit: 14.11.2026, 22:05 Uhr bis 16.11.2026, 20:34 Uhr (Samstagabend bis Montagabend, zwei volle Tag-Nacht-Zyklen). Je Richtung 2.706–2.707 Messblöcke zu je 10 Pings, also rund 27.000 Pakete pro Richtung und gut 162.000 insgesamt. In keinem Log fehlt ein Messblock (kein Abstand über 75 s), alle sechs Units liefen durch. Rohdaten (gzip): [messdaten/langzeit/](messdaten/langzeit/), Auswerteskript: [perfscripts/netmess-longterm-auswertung.py](perfscripts/netmess-longterm-auswertung.py).
+Messzeit: 14.11.2026, 22:05 Uhr bis 17.11.2026, 22:05 Uhr (Samstagabend bis Dienstagabend, drei volle Tag-Nacht-Zyklen, davon zwei Werktage). Je Richtung 4.191–4.192 Messblöcke zu je 10 Pings, also rund 41.900 Pakete pro Richtung und gut 251.000 insgesamt. In keinem Log fehlt ein Messblock (kein Abstand über 75 s). Alle sechs Units liefen bis zum Ende durch und wurden nach Ablauf von `RuntimeMaxSec=72h` planmäßig beendet (systemd zeigt sie deshalb als „failed (timeout)“ an). Rohdaten (gzip): [messdaten/langzeit/](messdaten/langzeit/), Auswerteskript: [perfscripts/netmess-longterm-auswertung.py](perfscripts/netmess-longterm-auswertung.py).
 
 | Quelle → Ziel | Pakete gesendet / verloren | Verlust | RTT min | RTT avg | Median | p99 | p99,9 | max | Jitter (mdev je Block, Ø) | Pakete > 10 ms |
 |---|---|---|---|---|---|---|---|---|---|---|
-| MeckMinecraft → NC3 | 27.060 / 10 | 0,037 % | 0,219 ms | 0,491 ms | 0,454 ms | 0,95 ms | 7,6 ms | 10,8 ms | 0,08 ms | 3 |
-| NC3 → MeckMinecraft | 27.070 / 9 | 0,033 % | 0,253 ms | 0,499 ms | 0,455 ms | 1,23 ms | 7,5 ms | 17,6 ms | 0,10 ms | 13 |
-| MeckMinecraft → Codefield | 27.060 / 10 | 0,037 % | 0,215 ms | 0,496 ms | 0,468 ms | 0,87 ms | 5,4 ms | 9,8 ms | 0,07 ms | 0 |
-| Codefield → MeckMinecraft | 27.070 / 0 | 0 % | 0,212 ms | 0,511 ms | 0,458 ms | 1,46 ms | 9,5 ms | 11,7 ms | 0,11 ms | 9 |
-| NC3 → Codefield | 27.070 / 8 | 0,030 % | 0,251 ms | 0,490 ms | 0,469 ms | 0,99 ms | 2,3 ms | 8,9 ms | 0,08 ms | 0 |
-| Codefield → NC3 | 27.070 / 0 | 0 % | 0,188 ms | 0,482 ms | 0,454 ms | 0,98 ms | 5,6 ms | 14,6 ms | 0,09 ms | 1 |
+| MeckMinecraft → NC3 | 41.910 / 10 | 0,024 % | 0,219 ms | 0,489 ms | 0,457 ms | 0,90 ms | 7,6 ms | 10,8 ms | 0,08 ms | 6 |
+| NC3 → MeckMinecraft | 41.920 / 9 | 0,021 % | 0,253 ms | 0,498 ms | 0,457 ms | 1,00 ms | 7,5 ms | 17,6 ms | 0,10 ms | 20 |
+| MeckMinecraft → Codefield | 41.910 / 10 | 0,024 % | 0,215 ms | 0,491 ms | 0,469 ms | 0,82 ms | 5,0 ms | 12,1 ms | 0,07 ms | 1 |
+| Codefield → MeckMinecraft | 41.920 / 0 | 0 % | 0,212 ms | 0,503 ms | 0,458 ms | 1,17 ms | 8,6 ms | 11,7 ms | 0,10 ms | 14 |
+| NC3 → Codefield | 41.920 / 8 | 0,019 % | 0,251 ms | 0,491 ms | 0,470 ms | 0,99 ms | 2,0 ms | 8,9 ms | 0,08 ms | 0 |
+| Codefield → NC3 | 41.920 / 0 | 0 % | 0,188 ms | 0,485 ms | 0,455 ms | 1,00 ms | 5,6 ms | 14,6 ms | 0,09 ms | 3 |
 
-**Latenz und Jitter:** Über die ganze Messung liegt die mittlere RTT auf allen Pfaden bei 0,48–0,51 ms, praktisch identisch mit der Kurzmessung (9.2). 99 % aller Pakete sind schneller als 1,5 ms. Ausreißer über 10 ms sind selten (höchstens 13 von 27.000 Paketen pro Richtung, Maximum 17,6 ms) und treten einzeln auf, nicht als länger erhöhte Phase. Der Jitter innerhalb eines Messblocks liegt im Mittel bei 0,07–0,11 ms.
+**Latenz und Jitter:** Über die ganze Messung liegt die mittlere RTT auf allen Pfaden bei 0,49–0,50 ms, praktisch identisch mit der Kurzmessung (9.2). 99 % aller Pakete sind schneller als 1,2 ms. Ausreißer über 10 ms sind selten (höchstens 20 von 41.920 Paketen pro Richtung, Maximum 17,6 ms) und treten einzeln auf, nicht als länger erhöhte Phase. Der Jitter innerhalb eines Messblocks liegt im Mittel bei 0,07–0,10 ms, die Gesamtstreuung (σ) bei 0,16–0,46 ms.
 
-**Tag/Nacht:** Es gibt keinen Tagesgang. Der schlechteste Stundenmittelwert liegt je nach Pfad bei 0,52–0,60 ms, der beste bei 0,45–0,48 ms. Tagsüber (07–23 Uhr) und nachts unterscheiden sich die Mittelwerte um höchstens 0,04 ms. Die einzige messbare Erhöhung fällt in den iperf3-Lauf am 15.11.2026, 04:00–04:12 Uhr (Ø 1,25–1,36 ms auf den Pfaden mit MeckMinecraft, Spitzen bis 10,8 ms). Das ist die eigene Volllast und kein Netzproblem; es zeigt aber, dass ausgelastete Leitungen die Latenz anderer Verbindungen spürbar erhöhen (vgl. Hinweis zu großen Übertragungen in 9.5).
+**Tag/Nacht und Werktag:** Es gibt keinen Tagesgang. Der schlechteste Stundenmittelwert liegt je nach Pfad bei 0,51–0,59 ms, der beste bei 0,45–0,47 ms. Tagsüber (07–23 Uhr) und nachts unterscheiden sich die Mittelwerte um höchstens 0,04 ms. Auch die Werktage (Montag/Dienstag) unterscheiden sich nicht vom Wochenende: Im letzten Messabschnitt (16.11.2026, 20:34 Uhr bis Messende, 25,5 h) liegt die mittlere RTT bei 0,48–0,50 ms, p99 bei 0,73–1,09 ms, und kein Stundenmittelwert übersteigt 0,66 ms. Die einzige messbare Erhöhung fällt in den iperf3-Lauf am 15.11.2026, 04:00–04:12 Uhr (Ø 1,25–1,36 ms auf den Pfaden mit MeckMinecraft, Spitzen bis 10,8 ms). Das ist die eigene Volllast und kein Netzproblem; es zeigt aber, dass ausgelastete Leitungen die Latenz anderer Verbindungen spürbar erhöhen (vgl. Hinweis zu großen Übertragungen in 9.5).
 
-**Paketverlust – ein einzelnes Ereignis:** Alle Verluste stammen aus **einem Ereignis am 16.11.2026 um 05:17 Uhr** (Montagfrüh); außerhalb davon ging in 46,5 Stunden kein einziges Paket verloren.
+**Paketverlust – ein einzelnes Ereignis:** Alle Verluste stammen aus **einem Ereignis am 16.11.2026 um 05:17 Uhr** (Montagfrüh); außerhalb davon ging in 72 Stunden kein einziges Paket verloren. In den 41 Stunden nach dem Ereignis trat keine weitere Unterbrechung auf.
 
 | Host | Messblock | Ergebnis |
 |---|---|---|
@@ -395,31 +395,32 @@ Die Unterbrechung begann also gegen 05:17:38 Uhr, dauerte mindestens 7 Sekunden 
 
 **Bewertung nach Abschnitt 4:**
 
-- Mittlere RTT: 0,48–0,51 ms → **Gut** (< 10 ms)
-- Jitter: 0,07–0,11 ms im Mittel, Gesamtstreuung (σ) 0,18–0,51 ms → **Gut** (< 2 ms)
-- Paketverlust: 0,03–0,04 % auf vier Pfaden, 0 % auf zwei → formal **Prüfbedarf** (> 0–0,1 %). Der Verlust geht aber vollständig auf die eine Unterbrechung zurück und ist nicht über die Zeit verteilt.
-- Stabilität: eine einzelne kurze Unterbrechung (Sekunden bis höchstens 1 Minute) in 46,5 h → **Prüfbedarf** („Einzelne Unterbrechungen“), keine wiederkehrenden Ausfälle.
+- Mittlere RTT: 0,49–0,50 ms → **Gut** (< 10 ms)
+- Jitter: 0,07–0,10 ms im Mittel, Gesamtstreuung (σ) 0,16–0,46 ms → **Gut** (< 2 ms)
+- Paketverlust: 0,02 % auf vier Pfaden, 0 % auf zwei → formal **Prüfbedarf** (> 0–0,1 %). Der Verlust geht aber vollständig auf die eine Unterbrechung zurück und ist nicht über die Zeit verteilt; ohne dieses Ereignis läge er auf allen Pfaden bei 0 %.
+- Stabilität: eine einzelne kurze Unterbrechung (Sekunden bis höchstens 1 Minute) in 72 h, keine Wiederholung → **Prüfbedarf** („Einzelne Unterbrechungen“), keine wiederkehrenden Ausfälle.
 
-Für K3s ist eine Unterbrechung dieser Länge unkritisch: Der Node-Status wechselt erst nach 40–50 s ohne Heartbeat auf `NotReady` (je nach Kubernetes-Version), Pods werden standardmäßig erst nach 5 Minuten verdrängt. Für embedded etcd (Phase 2) könnte eine solche Unterbrechung eine Leader-Neuwahl auslösen; das Cluster erholt sich davon selbst, sollte aber überwacht werden. Tritt das Ereignis bis zum Ende der Messung (17.11.2026, 22:05 Uhr) nicht erneut auf, bleibt es bei einem Einzelfall.
+Für K3s ist eine Unterbrechung dieser Länge unkritisch: Der Node-Status wechselt erst nach 40–50 s ohne Heartbeat auf `NotReady` (je nach Kubernetes-Version), Pods werden standardmäßig erst nach 5 Minuten verdrängt. Für embedded etcd (Phase 2) könnte eine solche Unterbrechung eine Leader-Neuwahl auslösen; das Cluster erholt sich davon selbst, sollte aber überwacht werden. Da sich das Ereignis bis Messende nicht wiederholt hat, wird es als Einzelfall gewertet.
 
 ### 9.7 Offene Punkte
 
 | Punkt | Status |
 |---|---|
-| Langzeitmessung (alle 60 s 10 Pings, 6 Richtungen) | Zwischenauswertung nach 46,5 h in 9.6; läuft noch bis 17.11.2026, 22:05 Uhr, danach kurze Abschlussprüfung (v. a. ob sich die Unterbrechung wiederholt) |
+| Langzeitmessung (alle 60 s 10 Pings, 6 Richtungen, 72 h) | erledigt am 17.11.2026, 22:05 Uhr, abschließend ausgewertet in 9.6 |
 | iperf3, 60 s je Richtung, mit und ohne `-R` | erledigt am 15.11.2026, 04:00–04:12 Uhr, ausgewertet in 9.5 |
+| Unterbrechungen im Betrieb erfassen | im Monitoring (M5) vorsehen: Ping-/Blackbox-Prüfung zwischen den Nodes mit Alarm bei Verlust, damit sich wiederholende Provider-Störungen auffallen |
 | Phase B (Control Plane, WireGuard, K3s) | wartet auf den zusätzlichen Server |
 
-### 9.8 Vorläufige Bewertung
+### 9.8 Bewertung
 
-Gemessen an den Orientierungswerten aus Abschnitt 4 sind alle Kurzzeitwerte **„Gut“**:
+Gemessen an den Orientierungswerten aus Abschnitt 4 sind Latenz und Jitter in allen Messungen **„Gut“**:
 
-- Die mittlere RTT liegt bei etwa 0,45 ms, gefordert sind unter 10 ms.
-- Der Jitter (mdev) liegt bei höchstens 0,73 ms, gefordert sind unter 2 ms.
-- Der Paketverlust beträgt 0 %.
+- Die mittlere RTT liegt bei etwa 0,45 ms (Kurzmessung) bzw. 0,49–0,50 ms (72 h), gefordert sind unter 10 ms.
+- Der Jitter (mdev) liegt bei höchstens 0,73 ms (Kurzmessung) bzw. im Mittel 0,07–0,10 ms (72 h), gefordert sind unter 2 ms.
+- Der Paketverlust beträgt in den Kurzmessungen 0 %, in der Langzeitmessung 0–0,024 %, verursacht durch eine einzige kurze Provider-Unterbrechung.
 
-Einzelne Ausreißer bis 15,7 ms (Codefield → MeckMinecraft) sind vereinzelte Spitzen und haben keinen Einfluss auf Mittelwert und Streuung.
+Einzelne Ausreißer bis 17,6 ms sind vereinzelte Spitzen und haben keinen Einfluss auf Mittelwert und Streuung.
 
-**Vorläufige Empfehlung: A – Geeignet.** Das Netz zwischen den drei Hosts genügt sowohl einem Cluster mit einer einzelnen Control Plane als auch den strengeren Anforderungen von embedded etcd (Phase 2). Für die neue Control Plane bietet sich derselbe Provider und dasselbe Rechenzentrum an, damit sie ebenfalls nur einen Hop entfernt ist.
+Die Durchsatzmessung (9.5) zeigt in allen Richtungen die volle 1-Gbit/s-Anbindung. Einzige Einschränkung ist die hohe Retransmit-Quote von Codefield zu NC3 bei Volllast; große Übertragungen auf dieser Strecke sollten deshalb begrenzt werden. Die Langzeitmessung (9.6) zeigt über drei Tage und Nächte unverändert rund 0,5 ms Latenz und 0,1 ms Jitter ohne Tagesgang. Die einzige Auffälligkeit, eine kurze providerseitige Unterbrechung am 16.11.2026 um 05:17 Uhr, hat sich bis Messende nicht wiederholt.
 
-Die Durchsatzmessung (9.5) bestätigt die Empfehlung: Alle Richtungen erreichen die volle 1-Gbit/s-Anbindung. Einzige Einschränkung ist die hohe Retransmit-Quote von Codefield zu NC3 bei Volllast; große Übertragungen auf dieser Strecke sollten deshalb begrenzt werden. Die Langzeitmessung (9.6) bestätigt die Empfehlung ebenfalls: Latenz und Jitter bleiben über zwei Tage und Nächte unverändert bei rund 0,5 ms bzw. 0,1 ms, einen Tagesgang gibt es nicht. Einzige Auffälligkeit ist eine kurze, providerseitige Unterbrechung am 16.11.2026 um 05:17 Uhr (0,03–0,04 % Verlust auf vier Pfaden). Sie ist für eine einzelne Control Plane unkritisch; für embedded etcd sollte das Monitoring solche Unterbrechungen erfassen. **Empfehlung: A – Geeignet**, vorbehaltlich der Abschlussprüfung nach Messende am 17.11.2026.
+**Empfehlung: A – Geeignet.** Das Netz zwischen den drei Hosts genügt sowohl einem Cluster mit einer einzelnen Control Plane als auch den strengeren Anforderungen von embedded etcd (Phase 2). Für die neue Control Plane bietet sich derselbe Provider und dasselbe Rechenzentrum an, damit sie ebenfalls nur einen Hop entfernt ist. Begleitend sollten große Übertragungen von Codefield zu NC3 in der Bandbreite begrenzt und Unterbrechungen zwischen den Nodes im Monitoring erfasst werden.

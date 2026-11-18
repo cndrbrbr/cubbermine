@@ -43,7 +43,7 @@ Heute liegen die Backups aller drei Hosts nur im mineback-Tresor auf NC3 (`/var/
 
 - [ ] Inventare aller Hosts verifizieren: CPU, RAM, Disk, Netzwerk, Firewall, laufende Container, Volumes und Compose-Dateien.
 - [ ] Abhängigkeiten, öffentliche Ports, DNS, Proxy, Backup-Stand und Speicherorte dokumentieren.
-- [ ] Netz-Latenz/RTT, Bandbreite, Paketverlust, MTU zwischen den drei Hosts messen.
+- [x] Netz-Latenz/RTT, Bandbreite, Paketverlust, MTU zwischen den drei Hosts messen (Phase A, 14.–17.11.2026, Ergebnis A – Geeignet, siehe [PreNetzwerkmessung.md](PreNetzwerkmessung.md)).
 - [ ] Neuen dedizierten Control-Plane-Server planen und anmieten (Richtwert: 2–4 vCPU, 4–8 GiB RAM, 40–80 GB SSD; tatsächlichen Bedarf prüfen).
 - [ ] Phase-1-Topologie festhalten: genau eine dedizierte K3s-Control-Plane, drei reine Worker; Single Point of Failure ausdrücklich akzeptieren oder überarbeiten.
 - [ ] Datastore und Sicherung/Wiederherstellung der einzelnen Control Plane festlegen; Sicherungsziel ist die Hetzner Storage Box (eigenes restic-Repository, Zugang nur anhängen).

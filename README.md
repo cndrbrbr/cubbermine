@@ -4,7 +4,7 @@
 
 Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hosting-Infrastruktur von **Docker Compose** zu einem **gemeinsamen Kubernetes-/K3s-Cluster**. Ziel ist eine zentral verwaltete Plattform, über die Minecraft-Server bereitgestellt und betrieben werden können.
 
-> **Projektstatus (17.11.2026):** Architektur- und Planungsphase. Meilenstein M0 läuft: Bestandsaufnahme und Netzwerkmessung sind erledigt (Empfehlung: **geeignet**), die Konzepte für Minecraft-Container, Registry, Websites/Dienste, Adressen und Backups stehen. Offen sind vor allem der Control-Plane-Server und die Speicherstrategie im Cluster. Parallel laufen **Sofortmaßnahmen im Bestand**: Sicherheitslücken wurden geschlossen, und seit dem 16.11.2026 entsteht eine verschlüsselte Offsite-Kopie aller Backups auf einer Hetzner Storage Box. Ein Cluster ist noch nicht installiert; die Infrastruktur läuft weiter mit Docker Compose.
+> **Projektstatus (18.11.2026):** Architektur- und Planungsphase. Meilenstein M0 läuft: Bestandsaufnahme und Netzwerkmessung sind erledigt (Empfehlung: **geeignet**), die Konzepte für Minecraft-Container, Registry, Websites/Dienste, Adressen und Backups stehen. Offen sind vor allem der Control-Plane-Server und die Speicherstrategie im Cluster. Parallel laufen **Sofortmaßnahmen im Bestand**: Sicherheitslücken wurden geschlossen, und seit dem 16.11.2026 entsteht eine verschlüsselte Offsite-Kopie aller Backups auf einer Hetzner Storage Box. Ein Cluster ist noch nicht installiert; die Infrastruktur läuft weiter mit Docker Compose.
 
 ## Bisherige Aktivitäten
 
@@ -12,7 +12,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 
 - **Bestandsaufnahme:** Die Docker-Compose-Infrastruktur auf **MeckMinecraft** (`185.170.113.136`), **NC3** (`2.56.99.112`) und **Codefield** (`89.58.11.96`) ist mit Architekturdiagramm, Ports, Volumes, Backups und Befunden beschrieben ([altsystem.md](altsystem.md)).
 - **Zielarchitektur:** Variante B, ein gemeinsamer K3s-Cluster mit einem zusätzlichen dedizierten Control-Plane-Server und den drei bestehenden Hosts als Worker; ein späterer Ausbau auf drei Control Planes ist als Option beschrieben ([architecture.md](architecture.md)).
-- **Netzwerkmessung Phase A** (14.–17.11.2026, [PreNetzwerkmessung.md](PreNetzwerkmessung.md)): Latenz rund **0,5 ms**, Jitter rund 0,1 ms, Durchsatz rund **1 Gbit/s** in allen Richtungen, eine kurze providerseitige Unterbrechung am 16.11.2026. **Ergebnis: A – Geeignet.**
+- **Netzwerkmessung Phase A** (14.–17.11.2026, [PreNetzwerkmessung.md](PreNetzwerkmessung.md)): Latenz rund **0,5 ms**, Jitter rund 0,1 ms, Durchsatz rund **1 Gbit/s** in allen Richtungen, eine kurze providerseitige Unterbrechung am 16.11.2026, die sich bis Messende nicht wiederholt hat. **Ergebnis: A – Geeignet** (abschließend ausgewertet).
 - **Container-Konzept:** unveränderliches Image pro Minecraft-Version aus der CI, Java als Hauptprozess, Start/Stopp über `replicas 1/0`, SFTP-Sidecar für FileZilla, Verwaltung über RCON, unverändertes Datenlayout ([dockerminecraft.md](dockerminecraft.md)); Registry GHCR mit GitHub Actions ([registries.md](registries.md)).
 - **Weboberfläche:** Das bestehende Adminpanel wird zur **gemeinsamen Weboberfläche** für alle Server (`admin.meckminecraft.de`); alle heutigen Funktionen bleiben erhalten, neu kommt der **Restore in der Weboberfläche** (Schüler für den eigenen Server, Lehrkräfte für alle) ([features.md](features.md)).
 - **Adresskonzept:** **meckminecraft.de** für alles rund um Minecraft (inkl. des JavaScript-Workshops, der von codefield.de umzieht; NC3-Server als `nc3-mc1` … `nc3-mc5`), **cndrbrbr.de** für Omasys, NonameQuiz und Kookie, **codefield.de** für orbita2core mit eigener Einstiegsseite. Minecraft-Server werden über **mc-router** nach Namen auf Port 25565 erreicht; Ollama bekommt eine niedrigere Priorität als Minecraft ([websites-monitoring.md](websites-monitoring.md)).
@@ -32,14 +32,13 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
    - Passwort des Storage-Box-Hauptkontos ändern; restic-Passwort offline sichern.
    - Firewall für den Metrik-Port auf Codefield aktivieren (vorbereitet), `/api/prometheus/` auf lesende Abfragen beschränken.
    - Ungenutzte Volumes auf NC3 (rund 125 GB) nach Freigabe archivieren bzw. aufräumen.
-2. **Netzwerkmessung abschließen:** Langzeitmessung nach Ende am 17.11.2026, 22:05 Uhr prüfen und die Bewertung festschreiben.
-3. **Offene Entscheidungen treffen:** Control-Plane-Server (Empfehlung: selber Provider/Standort), Speicherstrategie im Cluster, Ingress-Controller, BungeeCord oder Velocity, Aufbewahrungsregeln ([dockerminecraft.md](dockerminecraft.md), Abschnitt 8; [websites-monitoring.md](websites-monitoring.md), Abschnitt 6).
-4. **Control Plane und Cluster-Netz (M1):** Server anmieten, WireGuard mit MTU 1420, K3s installieren, Datastore-Snapshots auf die Storage Box und Restore testen, die drei Worker aufnehmen.
-5. **Minecraft-Prototyp (M2):** Spigot-Image per CI bauen und auf der Storage Box archivieren, Testserver als StatefulSet mit PVC, SFTP-Sidecar und mc-router, Monitoring im Cluster, Welt-Backup auf die Storage Box und vollständigen Restore nachweisen.
-6. **Cubbermine-Verwaltung (M3):** Adminpanel auf die Cubbermine API umstellen, alle Bestandsfunktionen plus Restore in der Weboberfläche.
-7. **Schrittweise migrieren (M4):** Server einzeln mit Backup und Rückfallmöglichkeit umziehen, Proxy und Lobby zuletzt; danach Websites und Dienste nach dem Adresskonzept (meckminecraft.de mit Workshop, cndrbrbr.de, zuletzt orbita2core auf codefield.de).
-8. **Härtung und Betrieb (M5):** Monitoring, Alerts, regelmäßige Restore- und Ausfalltests inkl. Notfall-Restore aus der Storage Box.
-9. **Optional HA ausbauen (M1b):** später zwei weitere Control-Plane-Server, sofern Bedarf besteht; die Netzwerkqualität lässt es zu.
+2. **Offene Entscheidungen treffen:** Control-Plane-Server (Empfehlung: selber Provider/Standort), Speicherstrategie im Cluster, Ingress-Controller, BungeeCord oder Velocity, Aufbewahrungsregeln ([dockerminecraft.md](dockerminecraft.md), Abschnitt 8; [websites-monitoring.md](websites-monitoring.md), Abschnitt 6).
+3. **Control Plane und Cluster-Netz (M1):** Server anmieten, WireGuard mit MTU 1420, K3s installieren, Datastore-Snapshots auf die Storage Box und Restore testen, die drei Worker aufnehmen.
+4. **Minecraft-Prototyp (M2):** Spigot-Image per CI bauen und auf der Storage Box archivieren, Testserver als StatefulSet mit PVC, SFTP-Sidecar und mc-router, Monitoring im Cluster, Welt-Backup auf die Storage Box und vollständigen Restore nachweisen.
+5. **Cubbermine-Verwaltung (M3):** Adminpanel auf die Cubbermine API umstellen, alle Bestandsfunktionen plus Restore in der Weboberfläche.
+6. **Schrittweise migrieren (M4):** Server einzeln mit Backup und Rückfallmöglichkeit umziehen, Proxy und Lobby zuletzt; danach Websites und Dienste nach dem Adresskonzept (meckminecraft.de mit Workshop, cndrbrbr.de, zuletzt orbita2core auf codefield.de).
+7. **Härtung und Betrieb (M5):** Monitoring, Alerts, regelmäßige Restore- und Ausfalltests inkl. Notfall-Restore aus der Storage Box.
+8. **Optional HA ausbauen (M1b):** später zwei weitere Control-Plane-Server, sofern Bedarf besteht; die Netzwerkqualität lässt es zu.
 
 ## Dokumentation – empfohlene Lesereihenfolge
 
