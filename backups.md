@@ -372,7 +372,7 @@ Einmal nach der Einrichtung einen Restore ausprobieren: eine Datei wiederherstel
 | Punkt | Stand |
 |---|---|
 | Erstlauf der Offsite-Kopie (~830 GB) | erledigt am 17.11.2026, 04:07 (834 GiB, 376 GiB gespeichert); erster täglicher Lauf am 18.11.2026 erfolgreich |
-| Grafana-Alarm für die Offsite-Kopie | offen (Erstlauf abgeschlossen) |
+| Grafana-Alarm für die Offsite-Kopie | erledigt am 18.11.2026: `srv-offsite-old` (letzte erfolgreiche Kopie älter als 36 h), `srv-offsite-collect` (Zugangsdateien nicht vollständig eingesammelt) und `srv-offsite-missing` (Metrik fehlt, obwohl NC3 erreichbar ist) |
 | Admin-Schlüssel zum Aufräumen und Aufbewahrungsregeln (2.8) | offen |
 | Box-Snapshots einschalten | offen |
 | Restore-Test aus der Storage Box von einem Rechner außerhalb von NC3 | offen |

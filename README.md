@@ -28,7 +28,7 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 ## Anstehende Arbeiten
 
 1. **Sofortmaßnahmen abschließen** ([planning.md](planning.md), Abschnitt S):
-   - Offsite-Kopie vervollständigen: Grafana-Alarm, Admin-Zugang zum Aufräumen, Box-Snapshots und Restore-Test von außerhalb NC3.
+   - Offsite-Kopie vervollständigen (Grafana-Alarm seit 18.11.2026 eingerichtet): Admin-Zugang zum Aufräumen, Box-Snapshots und Restore-Test von außerhalb NC3.
    - Passwort des Storage-Box-Hauptkontos ändern; restic-Passwort offline sichern.
    - Firewall für den Metrik-Port auf Codefield aktivieren (vorbereitet), `/api/prometheus/` auf lesende Abfragen beschränken.
    - Ungenutzte Volumes auf NC3 (rund 125 GB) nach Freigabe archivieren bzw. aufräumen.
