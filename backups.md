@@ -249,7 +249,7 @@ Hinweise aus der Einrichtung:
 
 - `RuntimeMaxSec` wirkt bei `Type=oneshot` nicht; ein Zeitlimit ginge nur über `TimeoutStartSec`.
 - Ohne `HOME`/`XDG_CACHE_HOME` findet restic unter systemd keinen Cache und wird langsam.
-- Der Erstlauf (~830 GB) dauert bei 25 MB/s etwa 10 Stunden. Deshalb gibt es kein Zeitfenster; danach werden nur noch Änderungen übertragen.
+- Der Erstlauf (~830 GB) dauert bei 25 MB/s etwa 10 Stunden. Deshalb gibt es kein Zeitfenster; danach werden nur noch Änderungen übertragen. Tatsächlich dauerte er 4,5 Stunden (16./17.11.2026, 23:35–04:07), weil durch Deduplizierung nur 376 GiB übertragen werden mussten.
 
 ### 2.6 Prüfen
 
@@ -371,8 +371,8 @@ Einmal nach der Einrichtung einen Restore ausprobieren: eine Datei wiederherstel
 
 | Punkt | Stand |
 |---|---|
-| Erstlauf der Offsite-Kopie (~830 GB) | läuft seit 16.11.2026, 23:35 |
-| Grafana-Alarm für die Offsite-Kopie | nach dem Erstlauf |
+| Erstlauf der Offsite-Kopie (~830 GB) | erledigt am 17.11.2026, 04:07 (834 GiB, 376 GiB gespeichert); erster täglicher Lauf am 18.11.2026 erfolgreich |
+| Grafana-Alarm für die Offsite-Kopie | offen (Erstlauf abgeschlossen) |
 | Admin-Schlüssel zum Aufräumen und Aufbewahrungsregeln (2.8) | offen |
 | Box-Snapshots einschalten | offen |
 | Restore-Test aus der Storage Box von einem Rechner außerhalb von NC3 | offen |
