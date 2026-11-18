@@ -4,7 +4,7 @@
 
 Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hosting-Infrastruktur von **Docker Compose** zu einem **gemeinsamen Kubernetes-/K3s-Cluster**. Ziel ist eine zentral verwaltete Plattform, über die Minecraft-Server bereitgestellt und betrieben werden können.
 
-> **Projektstatus (18.11.2026):** Architektur- und Planungsphase. Meilenstein M0 läuft: Bestandsaufnahme und Netzwerkmessung sind erledigt (Empfehlung: **geeignet**), die Konzepte für Minecraft-Container, Registry, Websites/Dienste, Adressen und Backups stehen. Offen sind vor allem der Control-Plane-Server und die Speicherstrategie im Cluster. Parallel laufen **Sofortmaßnahmen im Bestand**: Sicherheitslücken wurden geschlossen, und seit dem 16.11.2026 entsteht eine verschlüsselte Offsite-Kopie aller Backups auf einer Hetzner Storage Box. Ein Cluster ist noch nicht installiert; die Infrastruktur läuft weiter mit Docker Compose.
+> **Projektstatus (18.11.2026):** Architektur- und Planungsphase. Meilenstein M0 läuft: Bestandsaufnahme und Netzwerkmessung sind erledigt (Empfehlung: **geeignet**), die Konzepte für Minecraft-Container, Registry, Websites/Dienste, Adressen und Backups stehen. Offen sind vor allem der Control-Plane-Server und die Speicherstrategie im Cluster. Parallel laufen **Sofortmaßnahmen im Bestand**: Sicherheitslücken wurden geschlossen, und seit dem 17.11.2026 liegt eine verschlüsselte Offsite-Kopie aller Backups auf einer Hetzner Storage Box, die täglich aktualisiert wird. Ein Cluster ist noch nicht installiert; die Infrastruktur läuft weiter mit Docker Compose.
 
 ## Bisherige Aktivitäten
 
@@ -23,12 +23,12 @@ Cubbermine ist ein Projekt zur Weiterentwicklung einer bestehenden Minecraft-Hos
 - Prometheus und Grafana (MeckMinecraft) sowie Omasys (NC3) sind nicht mehr direkt öffentlich; Grafana läuft unter `https://grafana.meckminecraft.de`.
 - Prometheus-Daten liegen in einem benannten Volume; Prometheus, Grafana und Ollama laufen mit festen Versionen.
 - Die lokalen Änderungen von minecraftDash sind eingecheckt, das node_exporter-Passwort liegt außerhalb von Git.
-- **Offsite-Kopie:** Hetzner Storage Box BX21 (5 TB) in Helsinki bestellt; restic sichert den mineback-Tresor und weitere Zugangsdateien täglich um 03:30 verschlüsselt dorthin, der Zugang von NC3 kann nur anhängen (Löschen getestet: abgewiesen). Der Erstlauf mit rund 830 GB läuft seit 16.11.2026, 23:35.
+- **Offsite-Kopie:** Hetzner Storage Box BX21 (5 TB) in Helsinki bestellt; restic sichert den mineback-Tresor und weitere Zugangsdateien täglich um 03:30 verschlüsselt dorthin, der Zugang von NC3 kann nur anhängen (Löschen getestet: abgewiesen). Der Erstlauf (rund 834 GiB, davon 376 GiB nach Deduplizierung) ist am 17.11.2026 um 04:07 abgeschlossen; der erste tägliche Lauf am 18.11.2026 war ebenfalls erfolgreich (+14 GiB, 40 Minuten). Das Repository umfasst derzeit rund 390 GiB.
 
 ## Anstehende Arbeiten
 
 1. **Sofortmaßnahmen abschließen** ([planning.md](planning.md), Abschnitt S):
-   - Erstlauf der Offsite-Kopie abwarten, danach Grafana-Alarm, Admin-Zugang zum Aufräumen, Box-Snapshots und Restore-Test von außerhalb NC3.
+   - Offsite-Kopie vervollständigen: Grafana-Alarm, Admin-Zugang zum Aufräumen, Box-Snapshots und Restore-Test von außerhalb NC3.
    - Passwort des Storage-Box-Hauptkontos ändern; restic-Passwort offline sichern.
    - Firewall für den Metrik-Port auf Codefield aktivieren (vorbereitet), `/api/prometheus/` auf lesende Abfragen beschränken.
    - Ungenutzte Volumes auf NC3 (rund 125 GB) nach Freigabe archivieren bzw. aufräumen.
